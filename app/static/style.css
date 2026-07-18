@@ -370,3 +370,97 @@ select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc;
 .stat-card strong { display:block; font-size:28px; color:#0b2948; }
 .stat-card span { display:block; margin-top:5px; color:#687482; font-size:13px; text-transform:uppercase; letter-spacing:.4px; }
 @media (max-width:700px) { .history-summary { grid-template-columns:repeat(2,1fr); } .quiz-table { font-size:13px; } }
+
+/* Scholarius 0.0.4 authentication and profiles */
+.auth-container { margin-top: 70px; }
+.version-note { margin: 24px 0 0; color: #8a949e; font-size: 12px; }
+.form-group small { display:block; margin-top:7px; color:#6b7280; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+@media (max-width:700px) { .form-grid { grid-template-columns:1fr; } }
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.4 quiet corner navigation and version label
+   ------------------------------------------------------------------------- */
+
+.corner-nav {
+    position: fixed;
+    left: 20px;
+    bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    z-index: 1000;
+}
+
+.corner-nav-button {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.42);
+    border-radius: 50%;
+    color: #ffffff;
+    background: #0b2948;
+    box-shadow: 0 7px 17px rgba(7, 30, 52, 0.22);
+    text-decoration: none;
+    font-size: 23px;
+    line-height: 1;
+    transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.corner-nav-button:hover {
+    transform: translateY(-2px);
+    background: #123e69;
+    box-shadow: 0 9px 20px rgba(7, 30, 52, 0.28);
+}
+
+.corner-nav-button:focus-visible {
+    outline: 3px solid rgba(25, 118, 210, 0.36);
+    outline-offset: 3px;
+}
+
+.corner-nav-admin {
+    background: #3b4652;
+    font-size: 16px;
+}
+
+.corner-nav-admin:hover {
+    background: #525f6d;
+}
+
+.version-label {
+    position: fixed;
+    right: 16px;
+    bottom: 12px;
+    z-index: 999;
+    color: rgba(40, 55, 70, 0.42);
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.25px;
+    user-select: none;
+}
+
+/* The old single settings button is superseded by .corner-nav. */
+.settings-button {
+    display: none;
+}
+
+@media (max-width: 560px) {
+    .corner-nav {
+        left: 14px;
+        bottom: 14px;
+        gap: 7px;
+    }
+
+    .corner-nav-button {
+        width: 40px;
+        height: 40px;
+    }
+
+    .version-label {
+        right: 12px;
+        bottom: 9px;
+        font-size: 10px;
+    }
+}

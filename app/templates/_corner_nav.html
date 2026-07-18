@@ -1,0 +1,21 @@
+<nav class="corner-nav" aria-label="Quick navigation">
+    {% if show_home|default(true) %}
+    <a class="corner-nav-button" href="/" aria-label="Home" title="Home">
+        <span aria-hidden="true">⌂</span>
+    </a>
+    {% endif %}
+
+    <a class="corner-nav-button" href="/profile" aria-label="Profile and settings" title="Profile and settings">
+        <span aria-hidden="true">⚙</span>
+    </a>
+
+    {% if is_admin|default(false) %}
+    <a class="corner-nav-button corner-nav-admin" href="/admin" aria-label="Administration" title="Administration">
+        <span aria-hidden="true">◆</span>
+    </a>
+    {% endif %}
+</nav>
+
+<div class="version-label" aria-label="Scholarius version">
+    Scholarius {{ version }}
+</div>

@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.auth import hash_password, verify_password
 from app.db import get_conn, init_db
 from app.engine import QuizEngine
 from app.parser_qti import load_qti_bank
@@ -36,17 +37,44 @@ def current_session(request: Request):
     return token, SESSIONS.get(token)
 
 
+def session_user(request: Request):
+    _, session = current_session(request)
+    return session if isinstance(session, dict) else None
+
+
+def redirect_to_login():
+    return RedirectResponse(url="/login", status_code=303)
+
+
+def is_admin(session):
+    return isinstance(session, dict) and session.get("role") == "admin"
+
+
+def user_count():
+    conn = get_conn()
+    count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    conn.close()
+    return count
+
+
 @app.get("/", response_class=HTMLResponse)
 def root(request: Request):
-    _, session = current_session(request)
+    session = session_user(request)
     if session:
-        username = session.get("username", "unknown") if isinstance(session, dict) else session
         return templates.TemplateResponse(
             request,
             "home.html",
-            {"request": request, "username": username, "version": __version__},
+            {
+                "request": request,
+                "username": session.get("username", "unknown"),
+                "display_name": session.get("display_name") or session.get("username", "unknown"),
+                "is_admin": is_admin(session),
+                "version": __version__,
+            },
         )
-    return templates.TemplateResponse(request, "login.html", {"request": request})
+    if user_count() == 0:
+        return RedirectResponse(url="/setup", status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @app.get("/version")
@@ -60,27 +88,140 @@ def version_endpoint_v1():
 
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
-    return templates.TemplateResponse(request, "login.html", {"request": request})
+def login_page(request: Request, error: str = ""):
+    if user_count() == 0:
+        return RedirectResponse(url="/setup", status_code=303)
+    return templates.TemplateResponse(
+        request, "login.html", {"request": request, "error": error, "version": __version__}
+    )
 
 
 @app.post("/auth/login")
 def auth_login(username: str = Form(...), password: str = Form(...)):
-    if not username.strip() or not password:
-        return HTMLResponse("<h2>Invalid login</h2>", status_code=400)
+    username = username.strip()
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT username, password, display_name, role, theme FROM users WHERE username=?",
+        (username,),
+    ).fetchone()
+    if not row or not verify_password(password, row["password"]):
+        conn.close()
+        return RedirectResponse(url="/login?error=Invalid+username+or+password", status_code=303)
 
-    # Development behavior: accept a non-empty username/password.
+    # Upgrade old plaintext development passwords after a successful login.
+    if not row["password"].startswith("pbkdf2_sha256$"):
+        conn.execute("UPDATE users SET password=? WHERE username=?", (hash_password(password), username))
+        conn.commit()
+    conn.close()
+
     token = str(uuid.uuid4())
-    SESSIONS[token] = {"username": username.strip()}
-
+    SESSIONS[token] = {
+        "username": row["username"],
+        "display_name": row["display_name"] or row["username"],
+        "role": row["role"] or "user",
+        "theme": row["theme"] or "light",
+    }
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(key="token", value=token, httponly=True, samesite="lax")
     return response
 
 
+@app.get("/logout")
+def logout(request: Request):
+    token, _ = current_session(request)
+    if token:
+        SESSIONS.pop(token, None)
+        SESSION_INDEX.pop(token, None)
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("token")
+    return response
+
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page(request: Request, error: str = ""):
+    if user_count() == 0:
+        return RedirectResponse(url="/setup", status_code=303)
+    return templates.TemplateResponse(
+        request, "register.html", {"request": request, "error": error, "version": __version__}
+    )
+
+
+@app.post("/register")
+def register_profile(
+    username: str = Form(...),
+    display_name: str = Form(""),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+    theme: str = Form("light"),
+):
+    username = username.strip()
+    display_name = display_name.strip() or username
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{3,40}", username):
+        return RedirectResponse(url="/register?error=Use+3-40+letters,+numbers,+dots,+dashes,+or+underscores", status_code=303)
+    if password != confirm_password:
+        return RedirectResponse(url="/register?error=Passwords+do+not+match", status_code=303)
+    try:
+        password_hash = hash_password(password)
+    except ValueError as exc:
+        from urllib.parse import quote_plus
+        return RedirectResponse(url=f"/register?error={quote_plus(str(exc))}", status_code=303)
+    conn = get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO users (username, password, display_name, role, theme, created_at) VALUES (?, ?, ?, 'user', ?, ?)",
+            (username, password_hash, display_name, theme if theme in {'light','dark'} else 'light', datetime.now(timezone.utc).isoformat()),
+        )
+        conn.commit()
+    except Exception:
+        conn.close()
+        return RedirectResponse(url="/register?error=That+username+already+exists", status_code=303)
+    conn.close()
+    return RedirectResponse(url="/login", status_code=303)
+
+
 @app.get("/profile", response_class=HTMLResponse)
-def profile_page(request: Request):
-    return templates.TemplateResponse(request, "profile.html", {"request": request})
+def profile_page(request: Request, message: str = "", error: str = ""):
+    session = session_user(request)
+    if not session:
+        return redirect_to_login()
+    return templates.TemplateResponse(
+        request, "profile.html", {"request": request, "user": session, "message": message, "error": error, "version": __version__}
+    )
+
+
+@app.post("/profile")
+def profile_update(
+    request: Request,
+    display_name: str = Form(...),
+    theme: str = Form("light"),
+    new_password: str = Form(""),
+    confirm_password: str = Form(""),
+):
+    token, session = current_session(request)
+    if not token or not isinstance(session, dict):
+        return redirect_to_login()
+    display_name = display_name.strip() or session["username"]
+    theme = theme if theme in {"light", "dark"} else "light"
+    conn = get_conn()
+    if new_password:
+        if new_password != confirm_password:
+            conn.close()
+            return RedirectResponse(url="/profile?error=Passwords+do+not+match", status_code=303)
+        try:
+            password_hash = hash_password(new_password)
+        except ValueError as exc:
+            from urllib.parse import quote_plus
+            conn.close()
+            return RedirectResponse(url=f"/profile?error={quote_plus(str(exc))}", status_code=303)
+        conn.execute("UPDATE users SET display_name=?, theme=?, password=? WHERE username=?",
+                     (display_name, theme, password_hash, session["username"]))
+    else:
+        conn.execute("UPDATE users SET display_name=?, theme=? WHERE username=?",
+                     (display_name, theme, session["username"]))
+    conn.commit(); conn.close()
+    session["display_name"] = display_name
+    session["theme"] = theme
+    return RedirectResponse(url="/profile?message=Profile+updated", status_code=303)
 
 
 def local_name(tag: str) -> str:
@@ -145,6 +286,9 @@ def safe_quiz_filename(quiz_id: str) -> str:
 
 @app.get("/qb-manage", response_class=HTMLResponse)
 def qb_manage_page(request: Request, message: str = "", error: str = ""):
+    session = session_user(request)
+    if not is_admin(session):
+        return HTMLResponse("<h2>Administrator access required</h2><a href='/'>Home</a>", status_code=403)
     conn = get_conn()
     rows = conn.execute(
         "SELECT id, title, filename FROM quizzes ORDER BY title"
@@ -158,15 +302,20 @@ def qb_manage_page(request: Request, message: str = "", error: str = ""):
             "quizzes": rows,
             "message": message,
             "error": error,
+            "is_admin": True,
+            "version": __version__,
         },
     )
 
 
 @app.post("/qb-manage/import")
 async def import_quiz(
+    request: Request,
     quiz_file: UploadFile = File(...),
     overwrite: bool = Form(False),
 ):
+    if not is_admin(session_user(request)):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
     original_name = Path(quiz_file.filename or "").name
     if not original_name.lower().endswith(".xml"):
         return RedirectResponse(
@@ -275,123 +424,87 @@ def history_page(request: Request):
     conn.close()
     return templates.TemplateResponse(request, "history.html", {
         "request": request, "attempts": attempts, "domains": domains, "summary": summary,
-        "username": username, "version": __version__,
+        "username": username, "version": __version__, "is_admin": is_admin(session),
     })
 
 
 @app.get("/admin", response_class=HTMLResponse)
-def admin_page(request: Request):
+def admin_page(request: Request, message: str = "", error: str = ""):
+    session = session_user(request)
+    if not is_admin(session):
+        return HTMLResponse("<h2>Administrator access required</h2><a href='/'>Home</a>", status_code=403)
     conn = get_conn()
-    rows = conn.execute("SELECT username FROM users ORDER BY username").fetchall()
+    users = conn.execute("SELECT username, display_name, role, theme FROM users ORDER BY username").fetchall()
     conn.close()
-    users = [row[0] for row in rows]
     return templates.TemplateResponse(
-        request,
-        "admin.html",
-        {"request": request, "users": users},
+        request, "admin.html", {"request": request, "users": users, "message": message, "error": error, "version": __version__, "is_admin": True}
     )
 
 
 @app.post("/admin/create-user")
-def admin_create_user(username: str = Form(...), password: str = Form(...)):
-    conn = get_conn()
+def admin_create_user(
+    request: Request,
+    username: str = Form(...),
+    display_name: str = Form(""),
+    password: str = Form(...),
+    role: str = Form("user"),
+):
+    if not is_admin(session_user(request)):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    username = username.strip()
     try:
+        password_hash = hash_password(password)
+        conn = get_conn()
         conn.execute(
-            "INSERT INTO users (username, password) VALUES (?, ?)",
-            (username.strip(), password),
+            "INSERT INTO users (username, password, display_name, role, theme, created_at) VALUES (?, ?, ?, ?, 'light', ?)",
+            (username, password_hash, display_name.strip() or username, role if role in {'user','admin'} else 'user', datetime.now(timezone.utc).isoformat()),
         )
-        conn.commit()
+        conn.commit(); conn.close()
     except Exception as exc:
-        conn.close()
-        return HTMLResponse(f"<h3>User could not be created: {exc}</h3><a href='/admin'>Back</a>", status_code=400)
-    conn.close()
-    return RedirectResponse(url="/admin", status_code=303)
+        from urllib.parse import quote_plus
+        return RedirectResponse(url=f"/admin?error={quote_plus(str(exc))}", status_code=303)
+    return RedirectResponse(url="/admin?message=User+created", status_code=303)
 
 
 @app.get("/setup", response_class=HTMLResponse)
-def setup_page():
-    return """
-    <h1>Scholarius Setup</h1>
-    <form action="/setup/init-db" method="post">
-        <button type="submit">Initialize Database</button>
-    </form><br>
-    <form action="/setup/create-admin" method="post">
-        <button type="submit">Create Admin User</button>
-    </form><br>
-    <form action="/setup/load-quizzes" method="post">
-        <button type="submit">Load Sample Quizzes</button>
-    </form><br>
-    <form action="/setup/reset-db" method="post">
-        <button type="submit">Reset Database</button>
-    </form><br>
-    <a href="/">Back to Home</a>
-    """
-
-
-@app.post("/setup/init-db")
-def setup_init_db():
-    init_db()
-    return HTMLResponse("<h3>Database initialized</h3><a href='/setup'>Back</a>")
+def setup_page(request: Request, error: str = ""):
+    if user_count() > 0:
+        return HTMLResponse("<h2>Scholarius is already configured.</h2><a href='/login'>Continue to login</a>")
+    return templates.TemplateResponse(
+        request, "setup.html", {"request": request, "error": error, "version": __version__}
+    )
 
 
 @app.post("/setup/create-admin")
-def setup_create_admin():
-    conn = get_conn()
+def setup_create_admin(
+    username: str = Form(...),
+    display_name: str = Form(""),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+):
+    if user_count() > 0:
+        return HTMLResponse("<h2>Setup has already been completed.</h2>", status_code=409)
+    username = username.strip()
+    if password != confirm_password:
+        return RedirectResponse(url="/setup?error=Passwords+do+not+match", status_code=303)
     try:
-        conn.execute(
-            "INSERT INTO users (username, password) VALUES (?, ?)",
-            ("admin", "password"),
-        )
-        conn.commit()
-        message = "Admin user created: admin / password"
-    except Exception:
-        message = "Admin user already exists"
-    finally:
-        conn.close()
-
-    return HTMLResponse(f"<h3>{message}</h3><a href='/setup'>Back</a>")
-
-
-@app.post("/setup/load-quizzes")
-def setup_load_quizzes():
-    sample_quizzes = [
-        ("R2BpzuSgCYo", "Sample Quiz 1", "R2BpzuSgCYo.xml"),
-        ("fzFy-4P0uMw", "Sample Quiz 2", "fzFy-4P0uMw.xml"),
-    ]
-
+        password_hash = hash_password(password)
+    except ValueError as exc:
+        from urllib.parse import quote_plus
+        return RedirectResponse(url=f"/setup?error={quote_plus(str(exc))}", status_code=303)
     conn = get_conn()
-    conn.executemany(
-        """
-        INSERT INTO quizzes (id, title, filename)
-        VALUES (?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-            title=excluded.title,
-            filename=excluded.filename
-        """,
-        sample_quizzes,
+    conn.execute(
+        "INSERT INTO users (username, password, display_name, role, theme, created_at) VALUES (?, ?, ?, 'admin', 'light', ?)",
+        (username, password_hash, display_name.strip() or username, datetime.now(timezone.utc).isoformat()),
     )
-    conn.commit()
-    conn.close()
-
-    return HTMLResponse("<h3>Sample quizzes loaded</h3><a href='/setup'>Back</a>")
-
-
-@app.post("/setup/reset-db")
-def setup_reset_db():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("DROP TABLE IF EXISTS users")
-    cur.execute("DROP TABLE IF EXISTS quizzes")
-    cur.execute("DROP TABLE IF EXISTS attempt_answers")
-    cur.execute("DROP TABLE IF EXISTS attempts")
-    conn.commit()
-    conn.close()
-    init_db()
-    return HTMLResponse("<h3>Database reset</h3><a href='/setup'>Back</a>")
+    conn.commit(); conn.close()
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @app.get("/quiz-select", response_class=HTMLResponse)
 def quiz_select_page(request: Request):
+    if not session_user(request):
+        return redirect_to_login()
     conn = get_conn()
     rows = conn.execute("SELECT id, title FROM quizzes ORDER BY title").fetchall()
     conn.close()
@@ -399,12 +512,14 @@ def quiz_select_page(request: Request):
     return templates.TemplateResponse(
         request,
         "quiz_select.html",
-        {"request": request, "quizzes": quizzes},
+        {"request": request, "quizzes": quizzes, "version": __version__, "is_admin": is_admin(session_user(request))},
     )
 
 
 @app.get("/action", response_class=HTMLResponse)
 def action_page(request: Request, quiz_id: str):
+    if not session_user(request):
+        return redirect_to_login()
     conn = get_conn()
     row = conn.execute(
         "SELECT title, filename FROM quizzes WHERE id=?", (quiz_id,)
@@ -452,6 +567,7 @@ def action_page(request: Request, quiz_id: str):
             "planned_counts": planned_counts,
             "domain_inventory": domain_inventory,
             "version": __version__,
+            "is_admin": is_admin(session_user(request)),
         },
     )
 
@@ -502,7 +618,8 @@ def start_quiz(
         )
 
     username = session.get("username", "unknown") if isinstance(session, dict) else str(session)
-    SESSIONS[token] = {
+    updated_session = dict(session) if isinstance(session, dict) else {"username": username, "role": "user"}
+    updated_session.update({
         "username": username,
         "engine": QuizEngine(selection.questions),
         "quiz_id": quiz_id,
@@ -511,7 +628,8 @@ def start_quiz(
         "domain_counts": selection.domain_counts,
         "selection_warnings": selection.warnings,
         "saved": False,
-    }
+    })
+    SESSIONS[token] = updated_session
     SESSION_INDEX[token] = 0
     return RedirectResponse(url="/quiz-ui", status_code=303)
 
@@ -539,6 +657,8 @@ def quiz_ui(request: Request):
             "is_last": idx == len(engine.questions) - 1,
             "position": idx + 1,
             "total": len(engine.questions),
+            "version": __version__,
+            "is_admin": is_admin(session_user(request)),
         },
     )
 
@@ -599,5 +719,6 @@ def results_ui(request: Request):
             "selection_warnings": session.get("selection_warnings", []),
             "quiz_mode": session.get("quiz_mode", "quiz"),
             "version": __version__,
+            "is_admin": is_admin(session),
         },
     )

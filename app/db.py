@@ -4,23 +4,42 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "scholarius.db"
 
+
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
 
 def _columns(conn, table):
     return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+
 
 def _add_column(conn, table, definition):
     name = definition.split()[0]
     if name not in _columns(conn, table):
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
 
+
 def init_db():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, theme TEXT DEFAULT 'light')""")
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            theme TEXT DEFAULT 'light'
+        )"""
+    )
+    for definition in [
+        "display_name TEXT",
+        "role TEXT NOT NULL DEFAULT 'user'",
+        "created_at TEXT",
+    ]:
+        _add_column(conn, "users", definition)
+
     cur.execute("""CREATE TABLE IF NOT EXISTS quizzes (id TEXT PRIMARY KEY, title TEXT, filename TEXT)""")
     cur.execute("""CREATE TABLE IF NOT EXISTS attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, quiz_id TEXT, timestamp TEXT, answers TEXT, results TEXT)""")
     for definition in [
@@ -38,4 +57,5 @@ def init_db():
         FOREIGN KEY(attempt_id) REFERENCES attempts(id) ON DELETE CASCADE)""")
     cur.execute("""CREATE INDEX IF NOT EXISTS idx_attempt_answers_user_quiz ON attempt_answers(username, quiz_id)""")
     cur.execute("""CREATE INDEX IF NOT EXISTS idx_attempt_answers_question ON attempt_answers(username, quiz_id, question_id)""")
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()

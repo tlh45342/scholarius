@@ -1,24 +1,13 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <title>Profile - Scholarius</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-
-<div class="container">
-    <h1>Profile</h1>
-
-    <div class="menu">
-        <div class="button button-disabled">Edit Name (coming soon)</div>
-        <div class="button button-disabled">Light / Dark Mode (coming soon)</div>
-        <div class="button button-disabled">Change Password (coming soon)</div>
-        <div class="button button-disabled">Email / Login Settings (coming soon)
-</div>
-    </div>
-
-    <a class="back" href="/">Back to Home</a>
-</div>
-
-</body>
-</html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Profile - Scholarius</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><main class="container"><h1>Profile</h1><p class="left-text"><strong>Username:</strong> {{ user.username }}<br><strong>Role:</strong> {{ user.role }}</p>
+{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+<form action="/profile" method="post">
+<div class="form-group"><label for="display_name">Display name</label><input id="display_name" name="display_name" value="{{ user.display_name or user.username }}" required></div>
+<div class="form-group"><label for="theme">Appearance</label><select id="theme" name="theme"><option value="light" {% if user.theme == 'light' %}selected{% endif %}>Light</option><option value="dark" {% if user.theme == 'dark' %}selected{% endif %}>Dark</option></select></div>
+<div class="panel"><h2>Change password</h2><p class="left-text">Leave both fields empty to keep the current password.</p>
+<div class="form-group"><label for="new_password">New password</label><input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="10"></div>
+<div class="form-group"><label for="confirm_password">Confirm new password</label><input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="10"></div></div>
+<button class="button button-primary button-space" type="submit">Save Profile</button></form>
+<a class="back" href="/">Home</a><a class="back" href="/logout">Sign out</a></main>{% include "_corner_nav.html" %}
+</body></html>
