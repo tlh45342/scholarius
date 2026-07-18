@@ -1,15 +1,19 @@
-# Scholarius 0.0.4 — Profiles, Authentication, and Quiet Navigation
+# Scholarius 0.0.4 — Profiles and Authentication
 
-This refined 0.0.4 package includes:
+This test installment adds:
 
-- first-run administrator creation;
-- PBKDF2-HMAC-SHA256 password hashing and verification;
-- normal personal-profile creation;
+- first-run administrator creation at `/setup`;
+- PBKDF2-SHA256 password hashing using the Python standard library;
+- real username/password verification;
+- normal self-service profile creation at `/register`;
 - `admin` and `user` roles;
-- administrator-only question-bank and user-management routes;
-- profile editing, password changes, and stored appearance preference;
-- compact lower-left Home, Profile, and administrator-only Admin controls;
-- a faint lower-right version label;
-- preservation of role and profile information while a quiz is active.
+- admin-only Question Bank Management and Administration pages;
+- editable display name, light/dark preference, and password on `/profile`;
+- logout support;
+- automatic upgrade of old plaintext development passwords after a successful login.
 
-The Home control is hidden on the home page itself. The Admin control is rendered only for administrator sessions.
+## Important migration behavior
+
+An existing `users` table is upgraded in place. Existing development accounts with plaintext passwords can log in once using their current password; Scholarius then replaces that value with a secure hash.
+
+If there are no users, opening `/` redirects to `/setup` to create the first administrator.

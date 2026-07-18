@@ -8,7 +8,7 @@
 </head>
 <body>
 
-<div class="container container-wide">
+<div class="container container-wide card-with-corner">
     <h1>{{ title }}</h1>
     <p>{{ question_count }} supported questions are available.</p>
 
@@ -81,9 +81,8 @@
             <button class="button button-primary" type="submit">Start</button>
         </div>
     </form>
-
-    <a class="back" href="/quiz-select">Back</a>
-    
+    <a class="card-corner-icon" href="/quiz-select"
+       aria-label="Back to quiz selection" title="Back to quiz selection">‹</a>
 </div>
 
 {% include "_corner_nav.html" %}

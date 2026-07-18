@@ -308,6 +308,26 @@ def qb_manage_page(request: Request, message: str = "", error: str = ""):
     )
 
 
+@app.get("/qb-manage/import", response_class=HTMLResponse)
+def qb_import_page(request: Request, error: str = ""):
+    session = session_user(request)
+    if not is_admin(session):
+        return HTMLResponse(
+            "<h2>Administrator access required</h2><a href='/'>Home</a>",
+            status_code=403,
+        )
+    return templates.TemplateResponse(
+        request,
+        "qb_import.html",
+        {
+            "request": request,
+            "error": error,
+            "is_admin": True,
+            "version": __version__,
+        },
+    )
+
+
 @app.post("/qb-manage/import")
 async def import_quiz(
     request: Request,
@@ -319,7 +339,7 @@ async def import_quiz(
     original_name = Path(quiz_file.filename or "").name
     if not original_name.lower().endswith(".xml"):
         return RedirectResponse(
-            url="/qb-manage?error=Only+XML+files+can+be+imported.",
+            url="/qb-manage/import?error=Only+XML+files+can+be+imported.",
             status_code=303,
         )
 
@@ -327,12 +347,12 @@ async def import_quiz(
     await quiz_file.close()
     if not data:
         return RedirectResponse(
-            url="/qb-manage?error=The+uploaded+file+was+empty.",
+            url="/qb-manage/import?error=The+uploaded+file+was+empty.",
             status_code=303,
         )
     if len(data) > 2 * 1024 * 1024:
         return RedirectResponse(
-            url="/qb-manage?error=The+XML+file+exceeds+the+2+MB+limit.",
+            url="/qb-manage/import?error=The+XML+file+exceeds+the+2+MB+limit.",
             status_code=303,
         )
 
@@ -341,7 +361,7 @@ async def import_quiz(
     except ValueError as exc:
         from urllib.parse import quote_plus
         return RedirectResponse(
-            url=f"/qb-manage?error={quote_plus(str(exc))}",
+            url=f"/qb-manage/import?error={quote_plus(str(exc))}",
             status_code=303,
         )
 
@@ -357,7 +377,7 @@ async def import_quiz(
         from urllib.parse import quote_plus
         return RedirectResponse(
             url=(
-                "/qb-manage?error="
+                "/qb-manage/import?error="
                 + quote_plus(
                     f"Quiz '{quiz_id}' already exists. Select Replace existing quiz to overwrite it."
                 )
@@ -467,11 +487,30 @@ def admin_create_user(
 
 
 @app.get("/setup", response_class=HTMLResponse)
-def setup_page(request: Request, error: str = ""):
+def setup_welcome_page(request: Request):
     if user_count() > 0:
-        return HTMLResponse("<h2>Scholarius is already configured.</h2><a href='/login'>Continue to login</a>")
+        return HTMLResponse(
+            "<h2>Scholarius is already configured.</h2>"
+            "<a href='/login'>Continue to login</a>"
+        )
     return templates.TemplateResponse(
-        request, "setup.html", {"request": request, "error": error, "version": __version__}
+        request,
+        "setup_welcome.html",
+        {"request": request, "version": __version__},
+    )
+
+
+@app.get("/setup/admin", response_class=HTMLResponse)
+def setup_admin_page(request: Request, error: str = ""):
+    if user_count() > 0:
+        return HTMLResponse(
+            "<h2>Scholarius is already configured.</h2>"
+            "<a href='/login'>Continue to login</a>"
+        )
+    return templates.TemplateResponse(
+        request,
+        "setup.html",
+        {"request": request, "error": error, "version": __version__},
     )
 
 
@@ -486,12 +525,12 @@ def setup_create_admin(
         return HTMLResponse("<h2>Setup has already been completed.</h2>", status_code=409)
     username = username.strip()
     if password != confirm_password:
-        return RedirectResponse(url="/setup?error=Passwords+do+not+match", status_code=303)
+        return RedirectResponse(url="/setup/admin?error=Passwords+do+not+match", status_code=303)
     try:
         password_hash = hash_password(password)
     except ValueError as exc:
         from urllib.parse import quote_plus
-        return RedirectResponse(url=f"/setup?error={quote_plus(str(exc))}", status_code=303)
+        return RedirectResponse(url=f"/setup/admin?error={quote_plus(str(exc))}", status_code=303)
     conn = get_conn()
     conn.execute(
         "INSERT INTO users (username, password, display_name, role, theme, created_at) VALUES (?, ?, ?, 'admin', 'light', ?)",

@@ -1,79 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Question Bank Management - Scholarius</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<div class="container container-wide">
+<main class="container container-wide card-with-corner">
     <h1>Question Bank Management</h1>
+    <p>Review the question banks currently installed in Scholarius.</p>
 
     {% if message %}
-        <div class="alert alert-success">{{ message }}</div>
+    <div class="alert alert-success">{{ message }}</div>
     {% endif %}
     {% if error %}
-        <div class="alert alert-error">{{ error }}</div>
+    <div class="alert alert-error">{{ error }}</div>
     {% endif %}
 
-    <section class="panel">
-        <h2>Import QTI XML</h2>
-        <p class="left-text">
-            Import a QTI assessmentTest containing single-answer multiple-choice
-            or true/false questions. The quiz identifier and title are read from
-            the XML file.
-        </p>
-
-        <form action="/qb-manage/import" method="post" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="quiz_file">QTI XML file</label>
-                <input id="quiz_file" name="quiz_file" type="file" accept=".xml,text/xml,application/xml" required>
+    <section class="panel bank-list-panel">
+        <div class="panel-heading-row">
+            <div>
+                <h2>Installed Question Banks</h2>
+                <p class="left-text compact-copy">
+                    These banks are available from Take Quiz / Test.
+                </p>
             </div>
+            <a class="button button-primary compact-action"
+               href="/qb-manage/import">
+                Import Question Bank
+            </a>
+        </div>
 
-            <label class="checkbox-row">
-                <input type="checkbox" name="overwrite" value="true">
-                Replace an existing quiz with the same identifier
-            </label>
-
-            <button class="button button-primary button-space" type="submit">Import Quiz</button>
-        </form>
-    </section>
-
-    <section class="panel">
-        <h2>Installed Quizzes</h2>
         {% if quizzes %}
-            <table class="quiz-table">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Identifier</th>
-                        <th>File</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for quiz in quizzes %}
-                    <tr>
-                        <td>{{ quiz[1] }}</td>
-                        <td><code>{{ quiz[0] }}</code></td>
-                        <td>{{ quiz[2] }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+        <table class="quiz-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Identifier</th>
+                    <th>File</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for quiz in quizzes %}
+                <tr>
+                    <td>{{ quiz[1] }}</td>
+                    <td><code>{{ quiz[0] }}</code></td>
+                    <td>{{ quiz[2] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-            <p>No quizzes are registered.</p>
+        <div class="empty-state">
+            <strong>No question banks are installed.</strong>
+            <span>Import a QTI XML bank to get started.</span>
+        </div>
         {% endif %}
     </section>
 
-    <div class="menu">
-        <div class="button button-disabled">Create Quiz / Test Bank (coming soon)</div>
-        <div class="button button-disabled">Edit Quiz / Test Bank (coming soon)</div>
-        <div class="button button-disabled">Export Quiz / Test Bank (coming soon)</div>
-        <div class="button button-disabled">Delete Quiz / Test Bank (coming soon)</div>
-    </div>
-
-    <a class="back" href="/">Back to Home</a>
-</div>
+    <a class="card-corner-icon" href="/"
+       aria-label="Home" title="Home">⌂</a>
+</main>
 
 {% include "_corner_nav.html" %}
 </body>

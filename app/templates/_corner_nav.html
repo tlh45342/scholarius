@@ -6,22 +6,18 @@
         </a>
         {% endif %}
 
-        <a
-            class="corner-nav-button"
-            href="/profile"
-            aria-label="Profile and settings"
-            title="Profile and settings"
-        >
+        <a class="corner-nav-button"
+           href="/profile"
+           aria-label="Profile and settings"
+           title="Profile and settings">
             <span aria-hidden="true">⚙</span>
         </a>
 
         {% if is_admin|default(false) %}
-        <a
-            class="corner-nav-button corner-nav-admin"
-            href="/admin"
-            aria-label="Administration"
-            title="Administration"
-        >
+        <a class="corner-nav-button corner-nav-admin"
+           href="/admin"
+           aria-label="Administration"
+           title="Administration">
             <span aria-hidden="true">◆</span>
         </a>
         {% endif %}

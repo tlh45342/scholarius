@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-page">
+
+<main class="container welcome-container">
+    <div class="welcome-mark" aria-hidden="true">S</div>
+    <h1>Welcome to Scholarius</h1>
+
+    <p class="welcome-copy">
+        You have reached the Scholarius personal quiz and testing system.
+        Scholarius helps you take quizzes, build exam-style tests,
+        track difficult questions, and return to focused review.
+    </p>
+
+    <p class="welcome-copy">
+        The next step creates the administrator account used to configure
+        this installation and manage question banks.
+    </p>
+
+    <a class="button button-primary button-space" href="/setup/admin">
+        Begin Setup
+    </a>
+</main>
+
+<div class="public-version-label">Scholarius {{ version }}</div>
+</body>
+</html>
