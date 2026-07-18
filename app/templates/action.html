@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz Setup - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>{{ title }}</h1>
+    <p>Configure how you want to take this quiz.</p>
+
+    <div class="menu">
+        <div class="button button-disabled">Randomize Questions (coming soon)</div>
+        <div class="button button-disabled">Randomize Choices (coming soon)</div>
+        <div class="button button-disabled">Select Domain (coming soon)</div>
+        <div class="button button-disabled">Practice / Exam Mode (coming soon)</div>
+    </div>
+
+    <form action="/start-quiz" method="get">
+        <input type="hidden" name="quiz_id" value="{{ quiz_id }}">
+        <div class="form-group">
+            <button class="button button-primary" type="submit">Start Quiz</button>
+        </div>
+    </form>
+
+    <a class="back" href="/quiz-select">Back</a>
+</div>
+
+</body>
+</html>

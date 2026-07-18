@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="container login-container">
+
+    <h1>Scholarius</h1>
+    <p>Login to continue</p>
+
+    <form action="/auth/login" method="post">
+
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input
+                type="text"
+                id="username"
+                name="username"
+                placeholder="Enter username"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter password"
+                required
+            >
+        </div>
+
+        <div class="form-group button-space">
+            <button class="button button-primary" type="submit">
+                Login
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+</body>
+</html>

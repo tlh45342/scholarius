@@ -1,0 +1,40 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Quiz</h1>
+
+    <form action="/answer" method="post">
+        <input type="hidden" name="qid" value="{{ question.qid }}">
+
+        <p><strong>{{ question.prompt }}</strong></p>
+
+{% for key, value in question.choices.items() %}
+    <label class="choice-row">
+        <input type="radio" name="choice" value="{{ key }}" required>
+        <span><strong>{{ key }}</strong>: {{ value }}</span>
+    </label>
+{% endfor %}
+
+        <div class="form-group">
+            <button class="button button-primary" type="submit">
+                {% if is_last %}
+                    Finish Quiz
+                {% else %}
+                    Submit Answer
+                {% endif %}
+            </button>
+        </div>
+    </form>
+
+    <a class="back" href="/">Back to Home</a>
+</div>
+
+</body>
+</html>

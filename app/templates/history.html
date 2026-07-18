@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>History - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Attempt History</h1>
+
+    {% if history %}
+        <div class="menu">
+            {% for h in history %}
+                <div class="button button-disabled">
+                    <strong>{{ h.quiz_id }}</strong><br>
+                    Score: {{ h.score }}<br>
+                    Date: {{ h.timestamp }}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No attempts yet.</p>
+    {% endif %}
+
+    <a class="back" href="/">Back to Home</a>
+</div>
+
+</body>
+</html>

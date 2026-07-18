@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Select Quiz - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Select a Quiz</h1>
+    <p>Choose a quiz to begin:</p>
+
+    <div class="menu">
+        {% for quiz_id, title in quizzes.items() %}
+            <a class="button button-primary" href="/action?quiz_id={{ quiz_id }}">
+                {{ title }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <a class="back" href="/">Back to Home</a>
+</div>
+
+</body>
+</html>
