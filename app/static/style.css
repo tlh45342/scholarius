@@ -807,3 +807,157 @@ body,
     color: rgba(32, 48, 64, 0.58);
     font-weight: 500;
 }
+
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.8 themes and accessibility foundation
+   ------------------------------------------------------------------------- */
+
+:root {
+    color-scheme: light;
+    --page-top: #e5edf5;
+    --page-bottom: #ccd9e6;
+    --page-glow: rgba(255, 255, 255, 0.91);
+    --surface: #ffffff;
+    --surface-soft: #f5f8fb;
+    --surface-muted: #eef3f7;
+    --text: #1f2d3a;
+    --text-muted: #5f6f7f;
+    --border: #c8d4df;
+    --primary: #0b5fa5;
+    --primary-hover: #084e89;
+    --primary-text: #ffffff;
+    --focus: #ffbf47;
+    --shadow: rgba(7, 30, 52, 0.18);
+    --version: rgba(32, 48, 64, 0.66);
+}
+
+body[data-theme="light"] {
+    color-scheme: light;
+}
+
+body[data-theme="dark"] {
+    color-scheme: dark;
+    --page-top: #1c2b38;
+    --page-bottom: #101a23;
+    --page-glow: rgba(82, 111, 137, 0.20);
+    --surface: #22313e;
+    --surface-soft: #2b3c4a;
+    --surface-muted: #17242f;
+    --text: #f2f5f7;
+    --text-muted: #c4ced6;
+    --border: #536675;
+    --primary: #3b8fd3;
+    --primary-hover: #58a3df;
+    --primary-text: #07131d;
+    --focus: #ffd166;
+    --shadow: rgba(0, 0, 0, 0.34);
+    --version: rgba(232, 239, 244, 0.72);
+}
+
+@media (prefers-color-scheme: dark) {
+    body[data-theme="system"] {
+        color-scheme: dark;
+        --page-top: #1c2b38;
+        --page-bottom: #101a23;
+        --page-glow: rgba(82, 111, 137, 0.20);
+        --surface: #22313e;
+        --surface-soft: #2b3c4a;
+        --surface-muted: #17242f;
+        --text: #f2f5f7;
+        --text-muted: #c4ced6;
+        --border: #536675;
+        --primary: #3b8fd3;
+        --primary-hover: #58a3df;
+        --primary-text: #07131d;
+        --focus: #ffd166;
+        --shadow: rgba(0, 0, 0, 0.34);
+        --version: rgba(232, 239, 244, 0.72);
+    }
+}
+
+body,
+.auth-page,
+.home-page {
+    color: var(--text);
+    background:
+        radial-gradient(circle at top, var(--page-glow), transparent 42%),
+        linear-gradient(145deg, var(--page-top) 0%, var(--page-bottom) 100%);
+}
+
+.container,
+.home-card,
+.panel,
+.placeholder-panel,
+.empty-state {
+    color: var(--text);
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: 0 12px 30px var(--shadow);
+}
+
+p,
+small,
+.left-text,
+.compact-copy,
+.placeholder-note,
+.account-create-help {
+    color: var(--text-muted);
+}
+
+input,
+select,
+textarea {
+    color: var(--text);
+    background: var(--surface-soft);
+    border-color: var(--border);
+}
+
+.button-primary,
+.home-button-primary,
+.management-launcher .button {
+    color: var(--primary-text);
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.button-primary:hover,
+.home-button-primary:hover,
+.management-launcher .button:hover {
+    color: var(--primary-text);
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.button-secondary,
+.account-create-button,
+.card-corner-icon {
+    color: var(--text);
+    background: var(--surface-soft);
+    border-color: var(--border);
+}
+
+.utility-version,
+.public-version-label {
+    color: var(--version);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid var(--focus) !important;
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

@@ -313,7 +313,14 @@ def qb_list_page(request: Request, message: str = "", error: str = ""):
             "<h2>Administrator access required</h2><a href='/'>Home</a>",
             status_code=403,
         )
-    quizzes = scan_quizzes()
+    with get_db() as conn:
+        quizzes = conn.execute(
+            """
+            SELECT quiz_id, title, filename
+            FROM quizzes
+            ORDER BY title COLLATE NOCASE
+            """
+        ).fetchall()
     return templates.TemplateResponse(
         request,
         "qb_list.html",

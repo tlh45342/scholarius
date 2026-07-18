@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Create Profile - Scholarius</title><link rel="stylesheet" href="/static/style.css"></head>
-<body><main class="container auth-container"><h1>Create Profile</h1><p>Create a normal study profile. Administrator privileges are not granted here.</p>
+<body data-theme="{{ theme|default('system') }}"><main class="container auth-container"><h1>Create Profile</h1><p>Create a normal study profile. Administrator privileges are not granted here.</p>
 {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
 <form action="/register" method="post">
 <div class="form-group"><label for="display_name">Display name</label><input id="display_name" name="display_name" autocomplete="name"></div>

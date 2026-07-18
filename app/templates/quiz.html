@@ -6,7 +6,7 @@
     <title>Quiz - Scholarius</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body data-theme="{{ theme|default('system') }}">
 
 <div class="container container-wide">
     <h1>Quiz</h1>
@@ -39,8 +39,6 @@
             </button>
         </div>
     </form>
-
-    <a class="back" href="/">Back to Home</a>
 </div>
 
 {% include "_corner_nav.html" %}

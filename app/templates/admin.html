@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administration - Scholarius</title><link rel="stylesheet" href="/static/style.css"></head>
-<body><main class="container container-wide"><h1>Administration</h1>
+<body data-theme="{{ theme|default('system') }}"><main class="container container-wide"><h1>Administration</h1>
 {% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
 <section class="panel"><h2>Create User</h2><form action="/admin/create-user" method="post">
 <div class="form-grid"><div><label for="display_name">Display name</label><input id="display_name" name="display_name"></div><div><label for="username">Username</label><input id="username" name="username" required></div><div><label for="password">Temporary password</label><input id="password" name="password" type="password" minlength="10" required></div><div><label for="role">Role</label><select id="role" name="role"><option value="user">User</option><option value="admin">Administrator</option></select></div></div>

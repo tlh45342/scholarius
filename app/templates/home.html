@@ -6,7 +6,7 @@
     <title>Scholarius</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="home-page">
+<body class="home-page" data-theme="{{ theme|default('system') }}">
 
 <main class="home-shell">
     <section class="home-card" aria-labelledby="home-title">
@@ -19,12 +19,12 @@
             </a>
 
             {% if is_admin %}
-            <a class="home-button home-button-secondary" href="/qb-manage">
+            <a class="home-button home-button-primary" href="/qb-manage">
                 Question Bank Management
             </a>
             {% endif %}
 
-            <a class="home-button home-button-secondary" href="/history">
+            <a class="home-button home-button-primary" href="/history">
                 View History
             </a>
         </nav>

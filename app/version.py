@@ -1,5 +1,5 @@
 PRODUCT_NAME = "Scholarius"
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 
 def version_info():
