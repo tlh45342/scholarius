@@ -1,34 +1,36 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz - Scholarius</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<div class="container">
+<div class="container container-wide">
     <h1>Quiz</h1>
+    <p>Question {{ position }} of {{ total }}</p>
 
-    <form action="/answer" method="post">
+    {% if question.domain %}
+    <div class="note">{{ question.domain }}{% if question.objective %} · {{ question.objective }}{% endif %}</div>
+    {% endif %}
+
+    <form action="/answer" method="post" class="panel">
         <input type="hidden" name="qid" value="{{ question.qid }}">
 
-        <p><strong>{{ question.prompt }}</strong></p>
+        <p class="left-text"><strong>{{ question.prompt }}</strong></p>
 
-{% for key, value in question.choices.items() %}
-    <label class="choice-row">
-        <input type="radio" name="choice" value="{{ key }}" required>
-        <span><strong>{{ key }}</strong>: {{ value }}</span>
-    </label>
-{% endfor %}
+        {% for key, value in question.choices.items() %}
+        <label class="choice-row">
+            <input type="radio" name="choice" value="{{ key }}" required>
+            <span><strong>{{ key }}</strong>: {{ value }}</span>
+        </label>
+        {% endfor %}
 
-        <div class="form-group">
+        <div class="form-group button-space">
             <button class="button button-primary" type="submit">
-                {% if is_last %}
-                    Finish Quiz
-                {% else %}
-                    Submit Answer
-                {% endif %}
+                {% if is_last %}Finish{% else %}Submit Answer{% endif %}
             </button>
         </div>
     </form>

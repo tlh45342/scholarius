@@ -10,10 +10,13 @@ from fastapi.templating import Jinja2Templates
 
 from app.db import get_conn, init_db
 from app.engine import QuizEngine
-from app.parser_qti import load_qti
+from app.parser_qti import load_qti_bank
+from app.selector import build_test, largest_remainder_counts
+from app.version import PRODUCT_NAME, __version__, version_info
 
-app = FastAPI()
+app = FastAPI(title=PRODUCT_NAME, version=__version__)
 init_db()
+print(f"{PRODUCT_NAME} {__version__} starting")
 
 BASE_DIR = Path(__file__).resolve().parent
 QTI_DIR = BASE_DIR / "qti"
@@ -40,9 +43,19 @@ def root(request: Request):
         return templates.TemplateResponse(
             request,
             "home.html",
-            {"request": request, "username": username},
+            {"request": request, "username": username, "version": __version__},
         )
     return templates.TemplateResponse(request, "login.html", {"request": request})
+
+
+@app.get("/version")
+def version_endpoint():
+    return version_info()
+
+
+@app.get("/v1/version")
+def version_endpoint_v1():
+    return version_info()
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -368,15 +381,53 @@ def quiz_select_page(request: Request):
 @app.get("/action", response_class=HTMLResponse)
 def action_page(request: Request, quiz_id: str):
     conn = get_conn()
-    row = conn.execute("SELECT title FROM quizzes WHERE id=?", (quiz_id,)).fetchone()
+    row = conn.execute(
+        "SELECT title, filename FROM quizzes WHERE id=?", (quiz_id,)
+    ).fetchone()
     conn.close()
     if not row:
         return HTMLResponse("<h2>Quiz not found</h2>", status_code=404)
 
+    try:
+        bank = load_qti_bank(QTI_DIR / row[1])
+    except Exception as exc:
+        return HTMLResponse(
+            f"<h2>Quiz file load failed</h2><pre>{exc}</pre>",
+            status_code=500,
+        )
+
+    domain_inventory = {}
+    for question in bank.questions:
+        name = question.domain or "Unclassified"
+        domain_inventory[name] = domain_inventory.get(name, 0) + 1
+
+    default_count = (
+        bank.blueprint.default_question_count
+        if bank.blueprint and bank.blueprint.default_question_count
+        else len(bank.questions)
+    )
+    default_count = min(default_count, len(bank.questions))
+    planned_counts = {}
+    if bank.blueprint:
+        planned_counts = largest_remainder_counts(
+            default_count,
+            {domain.name: domain.target_percent for domain in bank.blueprint.domains},
+        )
+
     return templates.TemplateResponse(
         request,
         "action.html",
-        {"request": request, "quiz_id": quiz_id, "title": row[0]},
+        {
+            "request": request,
+            "quiz_id": quiz_id,
+            "title": row[0],
+            "bank": bank,
+            "question_count": len(bank.questions),
+            "default_count": default_count,
+            "planned_counts": planned_counts,
+            "domain_inventory": domain_inventory,
+            "version": __version__,
+        },
     )
 
 
@@ -388,7 +439,13 @@ def get_engine(token: str):
 
 
 @app.get("/start-quiz")
-def start_quiz(request: Request, quiz_id: str):
+def start_quiz(
+    request: Request,
+    quiz_id: str,
+    question_count: int = 0,
+    selection_mode: str = "blueprint",
+    quiz_mode: str = "quiz",
+):
     token, session = current_session(request)
     if not token or not session:
         return RedirectResponse(url="/login", status_code=303)
@@ -399,23 +456,35 @@ def start_quiz(request: Request, quiz_id: str):
     if not row:
         return HTMLResponse("<h2>Quiz not found in database</h2>", status_code=404)
 
-    filename = row[0]
     try:
-        questions = load_qti(QTI_DIR / filename)
+        bank = load_qti_bank(QTI_DIR / row[0])
+        requested = question_count if question_count > 0 else None
+        selection = build_test(
+            bank,
+            question_count=requested,
+            selection_mode=selection_mode,
+        )
     except Exception as exc:
         return HTMLResponse(
             f"<h2>Quiz file load failed</h2><pre>{exc}</pre>",
             status_code=500,
         )
 
-    if not questions:
-        return HTMLResponse("<h2>No supported questions were found in this quiz.</h2>", status_code=400)
+    if not selection.questions:
+        return HTMLResponse(
+            "<h2>No supported questions were found in this quiz.</h2>",
+            status_code=400,
+        )
 
     username = session.get("username", "unknown") if isinstance(session, dict) else str(session)
     SESSIONS[token] = {
         "username": username,
-        "engine": QuizEngine(questions),
+        "engine": QuizEngine(selection.questions),
         "quiz_id": quiz_id,
+        "quiz_mode": quiz_mode,
+        "selection_mode": selection_mode,
+        "domain_counts": selection.domain_counts,
+        "selection_warnings": selection.warnings,
         "saved": False,
     }
     SESSION_INDEX[token] = 0
@@ -443,6 +512,8 @@ def quiz_ui(request: Request):
             "request": request,
             "question": engine.questions[idx],
             "is_last": idx == len(engine.questions) - 1,
+            "position": idx + 1,
+            "total": len(engine.questions),
         },
     )
 
@@ -472,5 +543,13 @@ def results_ui(request: Request):
     return templates.TemplateResponse(
         request,
         "results.html",
-        {"request": request, "score": engine.score(), "total": len(engine.questions)},
+        {
+            "request": request,
+            "score": engine.score(),
+            "total": len(engine.questions),
+            "domain_counts": session.get("domain_counts", {}),
+            "selection_warnings": session.get("selection_warnings", []),
+            "quiz_mode": session.get("quiz_mode", "quiz"),
+            "version": __version__,
+        },
     )

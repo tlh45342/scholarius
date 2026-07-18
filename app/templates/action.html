@@ -1,30 +1,89 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Setup - Scholarius</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<div class="container">
+<div class="container container-wide">
     <h1>{{ title }}</h1>
-    <p>Configure how you want to take this quiz.</p>
+    <p>{{ question_count }} supported questions are available.</p>
 
-    <div class="menu">
-        <div class="button button-disabled">Randomize Questions (coming soon)</div>
-        <div class="button button-disabled">Randomize Choices (coming soon)</div>
-        <div class="button button-disabled">Select Domain (coming soon)</div>
-        <div class="button button-disabled">Practice / Exam Mode (coming soon)</div>
+    {% if bank.blueprint %}
+    <div class="panel">
+        <h2>Test blueprint</h2>
+        <p class="left-text">
+            Scholarius will select questions using the bank's target domain percentages.
+        </p>
+        <table class="quiz-table">
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>Range</th>
+                    <th>Target</th>
+                    <th>Default test</th>
+                    <th>Available</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for domain in bank.blueprint.domains %}
+                <tr>
+                    <td>{{ domain.name }}</td>
+                    <td>{{ domain.min_percent|int }}–{{ domain.max_percent|int }}%</td>
+                    <td>{{ domain.target_percent|int }}%</td>
+                    <td>{{ planned_counts.get(domain.name, 0) }}</td>
+                    <td>{{ domain_inventory.get(domain.name, 0) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
+    {% endif %}
 
-    <form action="/start-quiz" method="get">
+    <form action="/start-quiz" method="get" class="panel">
         <input type="hidden" name="quiz_id" value="{{ quiz_id }}">
+
         <div class="form-group">
-            <button class="button button-primary" type="submit">Start Quiz</button>
+            <label for="quiz_mode">Mode</label>
+            <select id="quiz_mode" name="quiz_mode">
+                <option value="quiz">Quiz — study/practice</option>
+                <option value="test">Test — exam-style session</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="question_count">Number of questions</label>
+            <input
+                id="question_count"
+                name="question_count"
+                type="number"
+                min="1"
+                max="{{ question_count }}"
+                value="{{ default_count }}"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="selection_mode">Question selection</label>
+            <select id="selection_mode" name="selection_mode">
+                {% if bank.blueprint %}
+                <option value="blueprint">Use exam blueprint</option>
+                {% endif %}
+                <option value="random">Random from entire bank</option>
+            </select>
+        </div>
+
+        <div class="form-group button-space">
+            <button class="button button-primary" type="submit">Start</button>
         </div>
     </form>
 
     <a class="back" href="/quiz-select">Back</a>
+    <div class="note">Scholarius {{ version }}</div>
 </div>
 
 </body>
