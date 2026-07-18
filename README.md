@@ -2,7 +2,7 @@
 
 Scholarius is a lightweight web-based quiz and testing platform suitable for classrooms, self-study, certification preparation, and technical training.
 
-The goal of Scholarius is to provide a simple easy to use system that can stood up on demand. 
+The goal of Scholarius is to provide a flexiable instant on system ready for imediate use.
 
 It is my opinion that I shouldn't have had to create this.  Commercial systems abound and across a decade I really don't like the price creap of products. 
 
