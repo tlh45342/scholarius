@@ -40,6 +40,23 @@ git clone https://github.com/tlh45342/scholarius.git
 
 ---
 
+## Easy Start
+
+```bash
+docker compose up -d --build
+```
+
+---
+
+## Default credentials
+
+Default username: admin
+Default password: password
+
+As these are defaults please change promptly.
+
+---
+
 # Directory Layout
 
 ```
