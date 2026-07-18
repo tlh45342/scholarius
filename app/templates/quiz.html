@@ -28,6 +28,11 @@
         </label>
         {% endfor %}
 
+        <label class="checkbox-row review-row">
+            <input type="checkbox" name="marked" value="true">
+            <span>Mark this question for review</span>
+        </label>
+
         <div class="form-group button-space">
             <button class="button button-primary" type="submit">
                 {% if is_last %}Finish{% else %}Submit Answer{% endif %}

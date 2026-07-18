@@ -359,3 +359,14 @@ input {
         bottom: 18px;
     }
 }
+
+select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc; border-radius:6px; background:#fff; font-size:14px; }
+
+/* Scholarius 0.0.3 history */
+.review-row { padding: 12px; border-radius: 8px; background: #eef4fa; }
+.history-container { max-width: 900px; }
+.history-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:24px 0; }
+.stat-card { padding:18px 12px; border:1px solid #d9e0e8; border-radius:10px; background:#f9fbfd; text-align:center; }
+.stat-card strong { display:block; font-size:28px; color:#0b2948; }
+.stat-card span { display:block; margin-top:5px; color:#687482; font-size:13px; text-transform:uppercase; letter-spacing:.4px; }
+@media (max-width:700px) { .history-summary { grid-template-columns:repeat(2,1fr); } .quiz-table { font-size:13px; } }

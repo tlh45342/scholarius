@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime, timezone
 import re
 import uuid
 import xml.etree.ElementTree as ET
@@ -248,11 +249,34 @@ async def import_quiz(
 
 @app.get("/history", response_class=HTMLResponse)
 def history_page(request: Request):
-    return templates.TemplateResponse(
-        request,
-        "history.html",
-        {"request": request, "history": []},
-    )
+    _, session = current_session(request)
+    if not isinstance(session, dict):
+        return RedirectResponse(url="/login", status_code=303)
+    username = session.get("username", "unknown")
+    conn = get_conn()
+    attempts = conn.execute(
+        """SELECT a.id, a.quiz_id, COALESCE(q.title, a.quiz_id) AS title, a.mode, a.score,
+                  a.question_count, COALESCE(a.completed_at, a.timestamp) AS completed_at
+           FROM attempts a LEFT JOIN quizzes q ON q.id=a.quiz_id
+           WHERE a.username=? ORDER BY a.id DESC LIMIT 50""", (username,)
+    ).fetchall()
+    domains = conn.execute(
+        """SELECT COALESCE(domain, 'Unclassified') AS domain, COUNT(*) AS seen,
+                  SUM(was_correct) AS correct, ROUND(100.0*SUM(was_correct)/COUNT(*),1) AS accuracy
+           FROM attempt_answers WHERE username=? GROUP BY COALESCE(domain, 'Unclassified') ORDER BY domain""",
+        (username,),
+    ).fetchall()
+    summary = conn.execute(
+        """SELECT COUNT(*) AS seen, SUM(was_correct) AS correct,
+                  SUM(CASE WHEN was_correct=0 THEN 1 ELSE 0 END) AS missed,
+                  SUM(marked_for_review) AS marked
+           FROM attempt_answers WHERE username=?""", (username,)
+    ).fetchone()
+    conn.close()
+    return templates.TemplateResponse(request, "history.html", {
+        "request": request, "attempts": attempts, "domains": domains, "summary": summary,
+        "username": username, "version": __version__,
+    })
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -358,6 +382,7 @@ def setup_reset_db():
     cur = conn.cursor()
     cur.execute("DROP TABLE IF EXISTS users")
     cur.execute("DROP TABLE IF EXISTS quizzes")
+    cur.execute("DROP TABLE IF EXISTS attempt_answers")
     cur.execute("DROP TABLE IF EXISTS attempts")
     conn.commit()
     conn.close()
@@ -519,7 +544,7 @@ def quiz_ui(request: Request):
 
 
 @app.post("/answer")
-def answer(request: Request, qid: str = Form(...), choice: str = Form(...)):
+def answer(request: Request, qid: str = Form(...), choice: str = Form(...), marked: bool = Form(False)):
     token, _ = current_session(request)
     if not token:
         return RedirectResponse(url="/login", status_code=303)
@@ -528,7 +553,7 @@ def answer(request: Request, qid: str = Form(...), choice: str = Form(...)):
     if not engine:
         return HTMLResponse("<h2>No quiz session</h2>", status_code=400)
 
-    engine.answer(qid, choice)
+    engine.answer(qid, choice, marked=marked)
     SESSION_INDEX[token] = SESSION_INDEX.get(token, 0) + 1
     return RedirectResponse(url="/quiz-ui", status_code=303)
 
@@ -540,6 +565,29 @@ def results_ui(request: Request):
         return RedirectResponse(url="/login", status_code=303)
 
     engine = session["engine"]
+    if not session.get("saved"):
+        now = datetime.now(timezone.utc).isoformat()
+        conn = get_conn()
+        cur = conn.execute(
+            """INSERT INTO attempts (username, quiz_id, timestamp, completed_at, mode, selection_mode, score, question_count)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (session.get("username", "unknown"), session.get("quiz_id"), now, now,
+             session.get("quiz_mode", "quiz"), session.get("selection_mode", "random"),
+             engine.score(), len(engine.questions)),
+        )
+        attempt_id = cur.lastrowid
+        for row in engine.answer_rows():
+            conn.execute(
+                """INSERT INTO attempt_answers
+                   (attempt_id, username, quiz_id, question_id, domain, objective, selected_answer, correct_answer, was_correct, marked_for_review, answered_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (attempt_id, session.get("username", "unknown"), session.get("quiz_id"), row["question_id"],
+                 row["domain"], row["objective"], row["selected_answer"], row["correct_answer"],
+                 int(row["was_correct"]), int(row["marked_for_review"]), now),
+            )
+        conn.commit(); conn.close()
+        session["saved"] = True
+        session["attempt_id"] = attempt_id
     return templates.TemplateResponse(
         request,
         "results.html",
