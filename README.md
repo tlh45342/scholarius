@@ -21,6 +21,14 @@ It is my opinion that I shouldn't have had to create this.  Commercial systems a
 
 ---
 
+## Getting
+
+```bash
+git clone https://github.com/tlh45342/scholarius.git
+```
+
+---
+
 # Requirements
 
 - Docker
@@ -29,14 +37,6 @@ It is my opinion that I shouldn't have had to create this.  Commercial systems a
 or
 
 - Python 3.11+
-
----
-
-## Getting
-
-```bash
-git clone https://github.com/tlh45342/scholarius.git
-```
 
 ---
 
