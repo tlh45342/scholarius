@@ -379,34 +379,55 @@ select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc;
 @media (max-width:700px) { .form-grid { grid-template-columns:1fr; } }
 
 /* -------------------------------------------------------------------------
-   Scholarius 0.0.4 quiet corner navigation and version label
+   Scholarius 0.0.4 lower-left utility navigation
    ------------------------------------------------------------------------- */
 
 .corner-nav {
-    position: fixed;
-    left: 20px;
-    bottom: 18px;
-    display: flex;
+    position: fixed !important;
+    left: 20px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: 18px !important;
+
+    display: flex !important;
+    flex-direction: row !important;
     align-items: center;
     gap: 9px;
+
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
     z-index: 1000;
 }
 
 .corner-nav-button {
     width: 42px;
     height: 42px;
+
     display: grid;
     place-items: center;
+    flex: 0 0 42px;
+
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+
     border: 1px solid rgba(255, 255, 255, 0.42);
     border-radius: 50%;
+
     color: #ffffff;
     background: #0b2948;
     box-shadow: 0 7px 17px rgba(7, 30, 52, 0.22);
+
     text-decoration: none;
     font-size: 23px;
     line-height: 1;
-    transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+
+    transition:
+        transform 120ms ease,
+        background-color 120ms ease,
+        box-shadow 120ms ease;
 }
 
 .corner-nav-button:hover {
@@ -429,38 +450,22 @@ select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc;
     background: #525f6d;
 }
 
+/* The former standalone settings control and visible version label are retired. */
+.settings-button,
 .version-label {
-    position: fixed;
-    right: 16px;
-    bottom: 12px;
-    z-index: 999;
-    color: rgba(40, 55, 70, 0.42);
-    font-size: 11px;
-    line-height: 1;
-    letter-spacing: 0.25px;
-    user-select: none;
-}
-
-/* The old single settings button is superseded by .corner-nav. */
-.settings-button {
-    display: none;
+    display: none !important;
 }
 
 @media (max-width: 560px) {
     .corner-nav {
-        left: 14px;
-        bottom: 14px;
+        left: 14px !important;
+        bottom: 14px !important;
         gap: 7px;
     }
 
     .corner-nav-button {
         width: 40px;
         height: 40px;
-    }
-
-    .version-label {
-        right: 12px;
-        bottom: 9px;
-        font-size: 10px;
+        flex-basis: 40px;
     }
 }
