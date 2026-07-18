@@ -379,26 +379,83 @@ select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc;
 @media (max-width:700px) { .form-grid { grid-template-columns:1fr; } }
 
 /* -------------------------------------------------------------------------
-   Scholarius 0.0.4 lower-left utility navigation
+   Scholarius 0.0.4 account UX and lower-left utility strip
    ------------------------------------------------------------------------- */
 
-.corner-nav {
+.auth-page {
+    min-height: 100vh;
+    margin: 0;
+    background:
+        radial-gradient(
+            circle at top,
+            rgba(255, 255, 255, 0.96),
+            transparent 42%
+        ),
+        linear-gradient(
+            145deg,
+            #edf3f9 0%,
+            #dce6f0 100%
+        );
+}
+
+.auth-container {
+    margin-top: 70px;
+}
+
+.account-create-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e1e7ed;
+}
+
+.account-create-button {
+    color: #173a5e;
+    background: #f5f8fb;
+    border: 1px solid #cbd7e2;
+}
+
+.account-create-button:hover {
+    background: #eaf1f7;
+    border-color: #afc0cf;
+}
+
+.account-create-help {
+    margin: 12px 6px 0;
+    color: #6d7884;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.utility-strip {
     position: fixed !important;
-    left: 20px !important;
+    left: 18px !important;
     right: auto !important;
     top: auto !important;
-    bottom: 18px !important;
+    bottom: 16px !important;
 
     display: flex !important;
     flex-direction: row !important;
-    align-items: center;
-    gap: 9px;
+    align-items: center !important;
+    gap: 12px !important;
 
     width: auto !important;
     margin: 0 !important;
     padding: 0 !important;
 
     z-index: 1000;
+}
+
+.corner-nav {
+    position: static !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .corner-nav-button {
@@ -413,11 +470,10 @@ select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc;
     margin: 0;
     padding: 0;
 
-    border: 1px solid rgba(255, 255, 255, 0.42);
-    border-radius: 50%;
-
     color: #ffffff;
     background: #0b2948;
+    border: 1px solid rgba(255, 255, 255, 0.42);
+    border-radius: 50%;
     box-shadow: 0 7px 17px rgba(7, 30, 52, 0.22);
 
     text-decoration: none;
@@ -450,22 +506,54 @@ select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc;
     background: #525f6d;
 }
 
-/* The former standalone settings control and visible version label are retired. */
-.settings-button,
-.version-label {
+.utility-version,
+.public-version-label {
+    color: rgba(40, 55, 70, 0.42);
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.25px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.public-version-label {
+    position: fixed;
+    left: 18px;
+    bottom: 14px;
+    z-index: 1000;
+}
+
+.home-user,
+.version-label,
+.version-note,
+.settings-button {
     display: none !important;
 }
 
 @media (max-width: 560px) {
+    .utility-strip {
+        left: 13px !important;
+        bottom: 13px !important;
+        gap: 9px !important;
+    }
+
     .corner-nav {
-        left: 14px !important;
-        bottom: 14px !important;
-        gap: 7px;
+        gap: 6px !important;
     }
 
     .corner-nav-button {
-        width: 40px;
-        height: 40px;
-        flex-basis: 40px;
+        width: 39px;
+        height: 39px;
+        flex-basis: 39px;
+    }
+
+    .utility-version,
+    .public-version-label {
+        font-size: 9px;
+    }
+
+    .public-version-label {
+        left: 13px;
+        bottom: 11px;
     }
 }

@@ -1,21 +1,30 @@
-Scholarius 0.0.4 Navigation Correction
-========================================
+Scholarius 0.0.4 Account UX Patch
+==================================
 
-This patch changes only two application files:
+Replace these four files:
 
+    app/templates/home.html
+    app/templates/login.html
     app/templates/_corner_nav.html
     app/static/style.css
 
 Changes:
-- Removes the visible version label from all pages.
-- Keeps version reporting available through /version and /v1/version.
-- Forces Home, Profile, and authorized Admin controls into a horizontal
-  group in the lower-left corner.
-- Hides the Home control while already on the home page, as controlled by
-  the existing show_home template variable.
+- Removes "Signed in as ..." from the home card.
+- Makes Create Account a full secondary button on the login card.
+- Adds the text:
+  "Create a user account to save quiz history, marked questions,
+   and preferences."
+- Removes version text from both the home and login cards.
+- Places Home, Profile, authorized Admin, and a faint version label
+  together in a fixed lower-left utility strip.
+- On the login page, only the faint version label appears lower-left.
 
-Install:
-1. Replace the two files at their matching repository locations.
-2. Commit them to GitHub.
-3. Pull and rebuild the container.
-4. Force-refresh the browser with Ctrl+F5.
+No Python, authentication, or database files are changed.
+
+After replacing the files:
+    git add app/templates/home.html app/templates/login.html \
+            app/templates/_corner_nav.html app/static/style.css
+    git commit -m "Refine account creation and utility navigation"
+    git push
+
+Then rebuild and force-refresh the browser.
