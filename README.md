@@ -40,11 +40,12 @@ docker compose up -d --build
 
 ## Default credentials
 
+```bash
 Default username: admin
 Default password: password
+```
 
 As these are defaults please change promptly.
-
 
 ---
 
