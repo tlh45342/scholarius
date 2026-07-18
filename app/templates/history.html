@@ -17,5 +17,7 @@
 <div class="panel"><h2>Recent attempts</h2>{% if attempts %}<table class="quiz-table"><thead><tr><th>Date</th><th>Quiz / Test</th><th>Mode</th><th>Score</th></tr></thead><tbody>
 {% for a in attempts %}<tr><td>{{ a.completed_at }}</td><td>{{ a.title }}</td><td>{{ a.mode|title }}</td><td>{{ a.score }} / {{ a.question_count }}</td></tr>{% endfor %}
 </tbody></table>{% else %}<p>No attempts yet.</p>{% endif %}</div>
-<a class="back" href="/">Back to Home</a></div>{% include "_corner_nav.html" %}
+    <a class="card-corner-icon" href="/"
+       aria-label="Home" title="Home">⌂</a>
+</div>{% include "_corner_nav.html" %}
 </body></html>

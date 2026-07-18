@@ -658,3 +658,152 @@ select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc;
         bottom: 18px;
     }
 }
+
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.6 progressive account help
+   ------------------------------------------------------------------------- */
+
+.account-create-section {
+    position: relative;
+}
+
+.account-create-help {
+    display: none;
+}
+
+.account-tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 12px);
+
+    width: min(280px, calc(100vw - 64px));
+    box-sizing: border-box;
+    padding: 10px 12px;
+
+    color: #ffffff;
+    background: #263747;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.20);
+
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: center;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate(-50%, 6px);
+
+    transition:
+        opacity 130ms ease,
+        transform 130ms ease,
+        visibility 130ms ease;
+
+    z-index: 20;
+}
+
+.account-tooltip::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+
+    border: 7px solid transparent;
+    border-top-color: #263747;
+}
+
+.account-create-section:hover .account-tooltip,
+.account-create-section:focus-within .account-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .account-tooltip {
+        transition: none;
+    }
+}
+
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.7 question bank task launcher
+   ------------------------------------------------------------------------- */
+
+.management-launcher {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.management-launcher .button {
+    margin: 0;
+    text-align: center;
+}
+
+.placeholder-panel {
+    margin-top: 24px;
+    padding: 28px 24px;
+    border: 1px solid #d7e0e8;
+    border-radius: 12px;
+    background: #f8fafc;
+    text-align: center;
+}
+
+.placeholder-symbol {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 18px;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    background: #0b2948;
+    border-radius: 50%;
+    font-size: 28px;
+    line-height: 1;
+}
+
+.placeholder-note {
+    margin-top: 16px;
+    color: #778391;
+    font-size: 12px;
+}
+
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.7 final visual tuning
+   ------------------------------------------------------------------------- */
+
+/*
+ * Slightly deepen the existing blue page gradient without changing its
+ * overall character. This is intentionally a restrained adjustment.
+ */
+body,
+.auth-page,
+.home-page {
+    background:
+        radial-gradient(
+            circle at top,
+            rgba(255, 255, 255, 0.91),
+            transparent 42%
+        ),
+        linear-gradient(
+            145deg,
+            #e5edf5 0%,
+            #ccd9e6 100%
+        );
+}
+
+/*
+ * The lower-left version stamp remains secondary interface metadata,
+ * but receives a modest contrast increase for easier reading.
+ */
+.utility-version,
+.public-version-label {
+    color: rgba(32, 48, 64, 0.58);
+    font-weight: 500;
+}

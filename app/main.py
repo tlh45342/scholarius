@@ -288,18 +288,38 @@ def safe_quiz_filename(quiz_id: str) -> str:
 def qb_manage_page(request: Request, message: str = "", error: str = ""):
     session = session_user(request)
     if not is_admin(session):
-        return HTMLResponse("<h2>Administrator access required</h2><a href='/'>Home</a>", status_code=403)
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT id, title, filename FROM quizzes ORDER BY title"
-    ).fetchall()
-    conn.close()
+        return HTMLResponse(
+            "<h2>Administrator access required</h2><a href='/'>Home</a>",
+            status_code=403,
+        )
     return templates.TemplateResponse(
         request,
         "qb_manage.html",
         {
             "request": request,
-            "quizzes": rows,
+            "message": message,
+            "error": error,
+            "is_admin": True,
+            "version": __version__,
+        },
+    )
+
+
+@app.get("/qb-manage/list", response_class=HTMLResponse)
+def qb_list_page(request: Request, message: str = "", error: str = ""):
+    session = session_user(request)
+    if not is_admin(session):
+        return HTMLResponse(
+            "<h2>Administrator access required</h2><a href='/'>Home</a>",
+            status_code=403,
+        )
+    quizzes = scan_quizzes()
+    return templates.TemplateResponse(
+        request,
+        "qb_list.html",
+        {
+            "request": request,
+            "quizzes": quizzes,
             "message": message,
             "error": error,
             "is_admin": True,
@@ -325,6 +345,72 @@ def qb_import_page(request: Request, error: str = ""):
             "is_admin": True,
             "version": __version__,
         },
+    )
+
+
+def render_qb_placeholder(
+    request: Request,
+    *,
+    title: str,
+    description: str,
+    symbol: str,
+):
+    session = session_user(request)
+    if not is_admin(session):
+        return HTMLResponse(
+            "<h2>Administrator access required</h2><a href='/'>Home</a>",
+            status_code=403,
+        )
+    return templates.TemplateResponse(
+        request,
+        "qb_placeholder.html",
+        {
+            "request": request,
+            "title": title,
+            "description": description,
+            "symbol": symbol,
+            "is_admin": True,
+            "version": __version__,
+        },
+    )
+
+
+@app.get("/qb-manage/export", response_class=HTMLResponse)
+def qb_export_page(request: Request):
+    return render_qb_placeholder(
+        request,
+        title="Export Question Bank",
+        description=(
+            "Export will allow an installed question bank to be selected "
+            "and downloaded in a portable format."
+        ),
+        symbol="⇩",
+    )
+
+
+@app.get("/qb-manage/create", response_class=HTMLResponse)
+def qb_create_page(request: Request):
+    return render_qb_placeholder(
+        request,
+        title="Create Question Bank",
+        description=(
+            "Create will provide a guided workspace for building a new "
+            "question bank inside Scholarius."
+        ),
+        symbol="+",
+    )
+
+
+@app.get("/qb-manage/edit", response_class=HTMLResponse)
+def qb_edit_page(request: Request):
+    return render_qb_placeholder(
+        request,
+        title="Edit Question Bank",
+        description=(
+            "Edit will allow an installed bank, its metadata, and its "
+            "questions to be revised."
+        ),
+        symbol="✎",
     )
 
 

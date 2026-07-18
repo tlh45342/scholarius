@@ -8,57 +8,39 @@
 </head>
 <body>
 
-<main class="container container-wide card-with-corner">
+<main class="container card-with-corner">
     <h1>Question Bank Management</h1>
-    <p>Review the question banks currently installed in Scholarius.</p>
+    <p>Choose the question bank task you want to perform.</p>
 
     {% if message %}
     <div class="alert alert-success">{{ message }}</div>
     {% endif %}
+
     {% if error %}
     <div class="alert alert-error">{{ error }}</div>
     {% endif %}
 
-    <section class="panel bank-list-panel">
-        <div class="panel-heading-row">
-            <div>
-                <h2>Installed Question Banks</h2>
-                <p class="left-text compact-copy">
-                    These banks are available from Take Quiz / Test.
-                </p>
-            </div>
-            <a class="button button-primary compact-action"
-               href="/qb-manage/import">
-                Import Question Bank
-            </a>
-        </div>
+    <nav class="management-launcher" aria-label="Question bank tasks">
+        <a class="button button-secondary" href="/qb-manage/list">
+            List
+        </a>
 
-        {% if quizzes %}
-        <table class="quiz-table">
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Identifier</th>
-                    <th>File</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for quiz in quizzes %}
-                <tr>
-                    <td>{{ quiz[1] }}</td>
-                    <td><code>{{ quiz[0] }}</code></td>
-                    <td>{{ quiz[2] }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="empty-state">
-            <strong>No question banks are installed.</strong>
-            <span>Import a QTI XML bank to get started.</span>
-        </div>
-        {% endif %}
-    </section>
+        <a class="button button-secondary" href="/qb-manage/import">
+            Import
+        </a>
+
+        <a class="button button-secondary" href="/qb-manage/export">
+            Export
+        </a>
+
+        <a class="button button-secondary" href="/qb-manage/create">
+            Create
+        </a>
+
+        <a class="button button-secondary" href="/qb-manage/edit">
+            Edit
+        </a>
+    </nav>
 
     <a class="card-corner-icon" href="/"
        aria-label="Home" title="Home">⌂</a>
