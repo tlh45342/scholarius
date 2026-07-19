@@ -14,6 +14,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Run app directly with Python (enables if __name__ == "__main__" block)
-# This generates SSL certs and runs uvicorn with HTTPS
-CMD ["python", "app/main.py"]
+# Use -m flag to run as module (fixes import paths)
+CMD ["python", "-m", "app.main"]
