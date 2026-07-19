@@ -289,3 +289,15 @@ The near-term implementation should concentrate on a complete vertical path for:
 Matching and Ordering should remain visible roadmap goals, but should not be
 represented as complete merely because their names can be stored in a database.
 Their interaction model and scoring rules require a deliberate design pass.
+
+## Management workflow implemented
+
+The first management workflow is now organized around a bank-level landing card:
+
+1. **Bank Details** — title, description, author, and version.
+2. **Test Settings** — default test name and description, optional time limit, default question count, passing percentage, shuffle behavior, review, and explanation visibility.
+3. **Questions** — the existing XML-backed question editor.
+4. **Test Versions** — planned named versions such as Practice Test A, B, and C.
+5. **Domains & Subjects** — planned hierarchy for broad domains and narrower subject areas.
+
+The Create Question Bank wizard collects identity, descriptive metadata, and default test settings. Completion creates and validates the authoritative XML file, registers it with Scholarius, and builds the replaceable SQLite editing index.

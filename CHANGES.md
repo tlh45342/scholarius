@@ -212,3 +212,11 @@ curl -k https://localhost:8000/version
 - True/False, Single Choice, and Multiple Response are accepted by import validation.
 - Corrected the invalid `quizzes.quiz_id` query and repaired editor template contracts.
 - Question deletion remains intentionally disabled until XML-safe deletion is implemented.
+
+## Question Bank Management Vertical Slice
+
+- Added an Edit Question Bank landing card for bank details, test settings, questions, and planned management areas.
+- Added XML-backed editing for bank title, description, author, and bank version.
+- Added XML-backed default test settings: name, description, time limit, question count, passing percentage, shuffling, review, and explanation behavior.
+- Added a three-step Create Question Bank wizard that creates validated XML, registers the bank, and builds the SQLite editing index.
+- Kept Test Versions, Domains & Subjects, and advanced import/export visibly planned but disabled until their storage and behavior are implemented.

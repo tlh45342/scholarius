@@ -1,0 +1,10 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Edit {{ bank.title }} - Scholarius</title><link rel="stylesheet" href="/static/style.css"></head>
+<body data-theme="{{ theme|default('system') }}"><main class="container container-wide card-with-corner"><h1>Edit Question Bank</h1><h2>{{ bank.title }}</h2><p><code>{{ bank.bank_id }}</code> · {{ bank.question_count }} questions</p>{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+<div class="qb-card-grid">
+<a class="qb-task-card" href="/qb-manage/bank/{{ bank.bank_id }}/details"><strong>Bank Details</strong><span>Name, description, author, and version.</span></a>
+<a class="qb-task-card" href="/qb-manage/bank/{{ bank.bank_id }}/settings"><strong>Test Settings</strong><span>Time, passing score, scoring, shuffle, and review.</span></a>
+<a class="qb-task-card" href="/qb-manage/bank/{{ bank.bank_id }}"><strong>Questions</strong><span>Browse and edit the questions in this bank.</span></a>
+<div class="qb-task-card qb-task-disabled"><strong>Test Versions</strong><span>Practice Test A, B, and C. Planned next.</span></div>
+<div class="qb-task-card qb-task-disabled"><strong>Domains &amp; Subjects</strong><span>Organize broad domains and narrower subject areas.</span></div>
+<div class="qb-task-card qb-task-disabled"><strong>Import / Export</strong><span>Portable QTI packaging and validation.</span></div>
+</div><a class="card-corner-icon" href="/qb-manage/banks" aria-label="Back">‹</a></main>{% include "_corner_nav.html" %}</body></html>

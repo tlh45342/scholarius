@@ -438,15 +438,9 @@ def qb_export_page(request: Request):
 
 @app.get("/qb-manage/create", response_class=HTMLResponse)
 def qb_create_page(request: Request):
-    return render_qb_placeholder(
-        request,
-        title="Create Question Bank",
-        description=(
-            "Create will provide a guided workspace for building a new "
-            "question bank inside Scholarius."
-        ),
-        symbol="+",
-    )
+    if not is_admin(session_user(request)):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    return RedirectResponse(url="/qb-manage/create/step/1", status_code=303)
 
 
 @app.get("/qb-manage/edit")

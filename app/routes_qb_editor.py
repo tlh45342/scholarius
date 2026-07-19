@@ -7,6 +7,8 @@ index is refreshed.
 
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote_plus
+import re
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -17,6 +19,8 @@ from app.parser_qti import (
     load_qti_bank,
     store_question_bank_to_db,
     update_question_in_qti,
+    update_bank_metadata_in_qti,
+    create_empty_qti_bank,
 )
 
 
@@ -26,6 +30,168 @@ def add_qb_routes(app: FastAPI, templates, is_admin, session_user, qti_dir: Path
         if not session or not is_admin(session):
             return None
         return session
+
+
+    def load_bank_record(bank_id: str):
+        conn = get_conn()
+        try:
+            return conn.execute(
+                "SELECT bank_id, title, filename, question_count, imported_at FROM question_banks WHERE bank_id=?",
+                (bank_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+
+    def load_authoritative_bank(bank_id: str):
+        record = load_bank_record(bank_id)
+        if not record:
+            raise HTTPException(status_code=404, detail="Question bank not found")
+        xml_path = qti_dir / record["filename"]
+        if not xml_path.exists():
+            raise HTTPException(status_code=500, detail="Authoritative XML file is missing")
+        return record, xml_path, load_qti_bank(xml_path)
+
+    @app.get("/qb-manage/bank/{bank_id}/manage", response_class=HTMLResponse)
+    def qb_manage_bank(request: Request, bank_id: str, message: str = ""):
+        session = require_admin(request)
+        if not session:
+            return RedirectResponse(url="/login", status_code=303)
+        record, _, bank = load_authoritative_bank(bank_id)
+        return templates.TemplateResponse(request, "qb_bank_manage.html", {
+            "request": request, "bank": record, "metadata": bank.metadata,
+            "display_name": session.get("display_name"), "is_admin": True,
+            "message": message,
+        })
+
+    @app.get("/qb-manage/bank/{bank_id}/details", response_class=HTMLResponse)
+    def qb_bank_details_form(request: Request, bank_id: str, message: str = ""):
+        session = require_admin(request)
+        if not session:
+            return RedirectResponse(url="/login", status_code=303)
+        record, _, bank = load_authoritative_bank(bank_id)
+        return templates.TemplateResponse(request, "qb_bank_details.html", {
+            "request": request, "bank": record, "metadata": bank.metadata,
+            "display_name": session.get("display_name"), "is_admin": True,
+            "message": message,
+        })
+
+    @app.post("/qb-manage/bank/{bank_id}/details")
+    async def qb_bank_details_save(request: Request, bank_id: str):
+        if not require_admin(request):
+            raise HTTPException(status_code=403, detail="Administrator access required")
+        record, xml_path, _ = load_authoritative_bank(bank_id)
+        form = await request.form()
+        title = str(form.get("title", "")).strip()
+        updates = {
+            "description": str(form.get("description", "")).strip(),
+            "author": str(form.get("author", "")).strip(),
+            "bank_version": str(form.get("bank_version", "")).strip(),
+        }
+        update_bank_metadata_in_qti(xml_path, title=title, metadata_updates=updates)
+        refreshed = load_qti_bank(xml_path)
+        store_question_bank_to_db(refreshed, filename=record["filename"])
+        conn = get_conn()
+        try:
+            conn.execute("UPDATE quizzes SET title=? WHERE id=?", (title, bank_id))
+            conn.commit()
+        finally:
+            conn.close()
+        return RedirectResponse(url=f"/qb-manage/bank/{bank_id}/details?message=Bank+details+saved+to+XML", status_code=303)
+
+    @app.get("/qb-manage/bank/{bank_id}/settings", response_class=HTMLResponse)
+    def qb_bank_settings_form(request: Request, bank_id: str, message: str = ""):
+        session = require_admin(request)
+        if not session:
+            return RedirectResponse(url="/login", status_code=303)
+        record, _, bank = load_authoritative_bank(bank_id)
+        return templates.TemplateResponse(request, "qb_test_settings.html", {
+            "request": request, "bank": record, "metadata": bank.metadata,
+            "display_name": session.get("display_name"), "is_admin": True,
+            "message": message,
+        })
+
+    @app.post("/qb-manage/bank/{bank_id}/settings")
+    async def qb_bank_settings_save(request: Request, bank_id: str):
+        if not require_admin(request):
+            raise HTTPException(status_code=403, detail="Administrator access required")
+        record, xml_path, bank = load_authoritative_bank(bank_id)
+        form = await request.form()
+        passing = str(form.get("passing_score_percent", "80")).strip()
+        try:
+            passing_value = int(passing)
+            if not 0 <= passing_value <= 100:
+                raise ValueError
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Passing score must be from 0 to 100")
+        updates = {
+            "default_test_name": str(form.get("default_test_name", "")).strip(),
+            "test_description": str(form.get("test_description", "")).strip(),
+            "time_limit_minutes": str(form.get("time_limit_minutes", "")).strip(),
+            "default_test_question_count": str(form.get("default_test_question_count", "")).strip(),
+            "passing_score_percent": str(passing_value),
+            "score_basis": "percent",
+            "shuffle_questions": "true" if form.get("shuffle_questions") else "false",
+            "shuffle_choices": "true" if form.get("shuffle_choices") else "false",
+            "allow_review": "true" if form.get("allow_review") else "false",
+            "show_explanations": str(form.get("show_explanations", "quiz-only")),
+        }
+        update_bank_metadata_in_qti(xml_path, title=bank.title, metadata_updates=updates)
+        refreshed = load_qti_bank(xml_path)
+        store_question_bank_to_db(refreshed, filename=record["filename"])
+        return RedirectResponse(url=f"/qb-manage/bank/{bank_id}/settings?message=Test+settings+saved+to+XML", status_code=303)
+
+    @app.get("/qb-manage/create/step/{step}", response_class=HTMLResponse)
+    def qb_create_step(request: Request, step: int):
+        session = require_admin(request)
+        if not session:
+            return RedirectResponse(url="/login", status_code=303)
+        if step not in {1, 2, 3}:
+            return RedirectResponse(url="/qb-manage/create/step/1", status_code=303)
+        return templates.TemplateResponse(request, "qb_create_wizard.html", {
+            "request": request, "step": step, "display_name": session.get("display_name"), "is_admin": True,
+        })
+
+    @app.post("/qb-manage/create/finish")
+    async def qb_create_finish(request: Request):
+        if not require_admin(request):
+            raise HTTPException(status_code=403, detail="Administrator access required")
+        form = await request.form()
+        bank_id = str(form.get("bank_id", "")).strip().upper()
+        title = str(form.get("title", "")).strip()
+        if not re.fullmatch(r"[A-Z0-9][A-Z0-9_-]{1,63}", bank_id):
+            raise HTTPException(status_code=400, detail="Identifier must use 2-64 letters, numbers, underscores, or hyphens")
+        conn = get_conn()
+        try:
+            if conn.execute("SELECT 1 FROM quizzes WHERE id=?", (bank_id,)).fetchone():
+                raise HTTPException(status_code=409, detail="That bank identifier already exists")
+        finally:
+            conn.close()
+        filename = f"{bank_id}.xml"
+        xml_path = qti_dir / filename
+        metadata = {
+            "description": str(form.get("description", "")).strip(),
+            "author": str(form.get("author", "")).strip(),
+            "bank_version": str(form.get("bank_version", "1.0")).strip(),
+            "default_test_name": str(form.get("default_test_name", title)).strip(),
+            "test_description": str(form.get("test_description", "")).strip(),
+            "time_limit_minutes": str(form.get("time_limit_minutes", "")).strip(),
+            "default_test_question_count": str(form.get("default_test_question_count", "")).strip(),
+            "passing_score_percent": str(form.get("passing_score_percent", "80")).strip(),
+            "score_basis": "percent",
+            "shuffle_questions": "true" if form.get("shuffle_questions") else "false",
+            "shuffle_choices": "true" if form.get("shuffle_choices") else "false",
+            "allow_review": "true" if form.get("allow_review") else "false",
+            "show_explanations": str(form.get("show_explanations", "quiz-only")),
+        }
+        bank = create_empty_qti_bank(xml_path, identifier=bank_id, title=title, metadata=metadata)
+        store_question_bank_to_db(bank, filename=filename)
+        conn = get_conn()
+        try:
+            conn.execute("INSERT INTO quizzes (id, title, filename) VALUES (?, ?, ?)", (bank_id, title, filename))
+            conn.commit()
+        finally:
+            conn.close()
+        return RedirectResponse(url=f"/qb-manage/bank/{bank_id}/manage?message=Question+bank+created", status_code=303)
 
     @app.get("/qb-manage/banks", response_class=HTMLResponse)
     def qb_list_banks(request: Request):

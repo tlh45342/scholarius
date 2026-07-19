@@ -524,3 +524,45 @@ def update_question_in_qti(
     # Validate the complete edited bank before replacing the known-good XML.
     load_qti_bank(temporary)
     temporary.replace(path)
+
+
+def update_bank_metadata_in_qti(file_path, *, title: str, metadata_updates: Dict[str, str]):
+    """Update bank-level metadata and atomically replace the authoritative XML."""
+    path = Path(file_path)
+    tree = ET.parse(path)
+    root = tree.getroot()
+    if strip_ns(root.tag) != "assessmentTest":
+        raise ValueError("QTI root element must be assessmentTest")
+    clean_title = title.strip()
+    if not clean_title:
+        raise ValueError("Question-bank title is required")
+    root.attrib["title"] = clean_title
+    for label, value in metadata_updates.items():
+        _set_metadata_field(root, label, str(value).strip())
+    if hasattr(ET, "indent"):
+        ET.indent(tree, space="    ")
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    tree.write(temporary, encoding="utf-8", xml_declaration=True)
+    load_qti_bank(temporary)
+    temporary.replace(path)
+
+
+def create_empty_qti_bank(file_path, *, identifier: str, title: str, metadata: Optional[Dict[str, str]] = None):
+    """Create a valid empty Scholarius QTI bank and write it atomically."""
+    path = Path(file_path)
+    clean_identifier = identifier.strip()
+    clean_title = title.strip()
+    if not clean_identifier or not clean_title:
+        raise ValueError("Bank identifier and title are required")
+    root = ET.Element("assessmentTest", {"identifier": clean_identifier, "title": clean_title})
+    for label, value in (metadata or {}).items():
+        _set_metadata_field(root, label, str(value).strip())
+    tree = ET.ElementTree(root)
+    if hasattr(ET, "indent"):
+        ET.indent(tree, space="    ")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    tree.write(temporary, encoding="utf-8", xml_declaration=True)
+    load_qti_bank(temporary)
+    temporary.replace(path)
+    return load_qti_bank(path)
