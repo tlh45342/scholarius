@@ -15,6 +15,7 @@ from app.engine import QuizEngine
 from app.parser_qti import load_qti_bank
 from app.selector import build_test, largest_remainder_counts
 from app.version import PRODUCT_NAME, __version__, version_info
+from app.routes_qb_editor import add_qb_routes
 
 app = FastAPI(title=PRODUCT_NAME, version=__version__)
 init_db()
@@ -25,6 +26,9 @@ QTI_DIR = BASE_DIR / "qti"
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+# Integrate Question Bank Editor Routes
+add_qb_routes(app, templates, is_admin, session_user)
 
 SESSIONS = {}
 SESSION_INDEX = {}
@@ -317,7 +321,7 @@ def qb_list_page(request: Request, message: str = "", error: str = ""):
     try:
         quizzes = conn.execute(
             """
-            SELECT id, title, filename
+            SELECT quiz_id, title, filename
             FROM quizzes
             ORDER BY title COLLATE NOCASE
             """
