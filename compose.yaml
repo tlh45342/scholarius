@@ -1,11 +1,27 @@
 services:
   scholarius:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: scholarius:latest
+    build: .
     container_name: scholarius
+    
+    # Port mapping
     ports:
       - "8000:8000"
+    
+    # Persistent volumes
+    volumes:
+      # Persist app directory (includes database and certificates)
+      - ./app:/app/app
+    
+    # Environment variables
+    environment:
+      - PYTHONUNBUFFERED=1
+    
+    # Restart policy
     restart: unless-stopped
     
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
