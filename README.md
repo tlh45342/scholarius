@@ -28,3 +28,15 @@ WCAG conformance. Scholarius has not yet undergone a formal accessibility
 audit, assistive-technology test program, or production security review.
 Please be patient as the application and its user experience continue to
 develop.
+
+---
+
+# License
+
+Private project.
+
+---
+
+# Author
+
+Thomas Hamilton
