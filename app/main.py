@@ -27,9 +27,6 @@ QTI_DIR = BASE_DIR / "qti"
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
-# Integrate Question Bank Editor Routes
-add_qb_routes(app, templates, is_admin, session_user)
-
 SESSIONS = {}
 SESSION_INDEX = {}
 
@@ -52,6 +49,9 @@ def redirect_to_login():
 
 def is_admin(session):
     return isinstance(session, dict) and session.get("role") == "admin"
+
+# Integrate Question Bank Editor Routes
+add_qb_routes(app, templates, is_admin, session_user)
 
 
 def user_count():
