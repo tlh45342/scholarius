@@ -235,107 +235,73 @@ def load_qti(file_path):
     return load_qti_bank(file_path).questions
 
 
-def store_question_bank_to_db(bank: QuestionBank):
-    """
-    Store an imported question bank and its questions to SQLite.
-    Supports both single-choice and multiple-choice questions.
-    """
+def store_question_bank_to_db(bank: QuestionBank, filename: str = ""):
+    """Refresh the SQLite editing index from an authoritative XML bank."""
     conn = get_conn()
     cur = conn.cursor()
     now = datetime.utcnow().isoformat()
-
     try:
-        # Store the question bank
         cur.execute(
-            """
-            INSERT OR REPLACE INTO question_banks 
-            (bank_id, title, filename, imported_at, question_count)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (bank.identifier, bank.title, "", now, len(bank.questions))
+            """INSERT INTO question_banks (bank_id, title, filename, imported_at, question_count)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(bank_id) DO UPDATE SET
+                   title=excluded.title,
+                   filename=excluded.filename,
+                   imported_at=excluded.imported_at,
+                   question_count=excluded.question_count""",
+            (bank.identifier, bank.title, filename, now, len(bank.questions)),
         )
+        # The index is rebuilt as a unit so removed or renamed XML items do not
+        # linger in SQLite.
+        cur.execute("DELETE FROM questions WHERE bank_id=?", (bank.identifier,))
+        cur.execute("DELETE FROM domains WHERE bank_id=?", (bank.identifier,))
 
-        # Store domains and objectives if they exist
-        if bank.metadata:
-            domains_seen = set()
-            objectives_seen = set()
-
-            for q in bank.questions:
-                if q.domain and q.domain not in domains_seen:
-                    cur.execute(
-                        """
-                        INSERT OR IGNORE INTO domains 
-                        (bank_id, domain_id, domain_name)
-                        VALUES (?, ?, ?)
-                        """,
-                        (bank.identifier, q.domain, q.domain)
-                    )
-                    domains_seen.add(q.domain)
-
-                if q.objective and q.domain and q.objective not in objectives_seen:
-                    cur.execute(
-                        """
-                        INSERT OR IGNORE INTO objectives 
-                        (domain_id, objective_id, objective_name)
-                        VALUES (?, ?, ?)
-                        """,
-                        (q.domain, q.objective, q.objective)
-                    )
-                    objectives_seen.add(q.objective)
-
-        # Store each question
+        domains_seen = set()
+        objectives_seen = set()
         for question in bank.questions:
-            # For multi-choice, store correct_answers as JSON
-            correct_answers_json = None
-            if question.correct_answers:
-                import json
-                correct_answers_json = json.dumps(question.correct_answers)
-
-            cur.execute(
-                """
-                INSERT OR REPLACE INTO questions 
-                (bank_id, qid, prompt, question_type, correct_answer, correct_answers,
-                 explanation, domain, objective, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    bank.identifier,
-                    question.qid,
-                    question.prompt,
-                    question.question_type,
-                    question.correct,
-                    correct_answers_json,
-                    question.explanation,
-                    question.domain,
-                    question.objective,
-                    now,
-                    now,
-                )
-            )
-
-            # Get the question ID just inserted
-            question_id = cur.lastrowid
-
-            # Store answer choices
-            for choice_key, choice_text in question.choices.items():
+            if question.domain and question.domain not in domains_seen:
                 cur.execute(
-                    """
-                    INSERT INTO question_choices 
-                    (question_id, identifier, choice_text, position)
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (question_id, choice_key, choice_text, ord(choice_key) - ord('A') if len(choice_key) == 1 else 0)
+                    "INSERT OR IGNORE INTO domains (bank_id, domain_id, domain_name) VALUES (?, ?, ?)",
+                    (bank.identifier, question.domain, question.domain),
                 )
+                domains_seen.add(question.domain)
+            if question.objective and question.domain:
+                objective_key = (question.domain, question.objective)
+                if objective_key not in objectives_seen:
+                    cur.execute(
+                        "INSERT OR IGNORE INTO objectives (domain_id, objective_id, objective_name) VALUES (?, ?, ?)",
+                        (question.domain, f"{question.domain}:{question.objective}", question.objective),
+                    )
+                    objectives_seen.add(objective_key)
 
+            import json
+            correct_answers_json = json.dumps(question.correct_answers) if question.correct_answers else None
+            cur.execute(
+                """INSERT INTO questions
+                   (bank_id, qid, prompt, question_type, correct_answer, correct_answers,
+                    explanation, domain, objective, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    bank.identifier, question.qid, question.prompt, question.question_type,
+                    question.correct, correct_answers_json, question.explanation,
+                    question.domain, question.objective, now, now,
+                ),
+            )
+            question_id = cur.lastrowid
+            for position, (choice_key, choice_text) in enumerate(question.choices.items()):
+                cur.execute(
+                    """INSERT INTO question_choices
+                       (question_id, identifier, choice_text, position)
+                       VALUES (?, ?, ?, ?)""",
+                    (question_id, choice_key, choice_text, position),
+                )
         conn.commit()
         return True
-
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise e
+        raise
     finally:
         conn.close()
-
 
 def get_questions_by_bank(bank_id: str) -> list:
     """Retrieve all questions from a specific question bank."""
@@ -451,3 +417,110 @@ def get_question_by_id(question_id: int) -> dict:
         'objective': row[9],
         'choices': {ch[0]: ch[1] for ch in choices_rows},
     }
+
+
+
+def _first_descendant(parent, name: str):
+    return next((elem for elem in parent.iter() if strip_ns(elem.tag) == name), None)
+
+
+def _set_metadata_field(item, label: str, value: str):
+    """Set or create a lightweight QTI metadata field without discarding unknown XML."""
+    for field in (elem for elem in item.iter() if strip_ns(elem.tag) == "qtiMetadataField"):
+        field_label = _first_descendant(field, "fieldLabel")
+        if field_label is not None and (field_label.text or "").strip() == label:
+            entry = _first_descendant(field, "fieldEntry")
+            if entry is None:
+                entry = ET.SubElement(field, "fieldEntry")
+            entry.text = value
+            return
+    metadata = next((child for child in item if strip_ns(child.tag) == "qtiMetadata"), None)
+    if metadata is None:
+        metadata = ET.Element("qtiMetadata")
+        item.insert(0, metadata)
+    field = ET.SubElement(metadata, "qtiMetadataField")
+    ET.SubElement(field, "fieldLabel").text = label
+    ET.SubElement(field, "fieldEntry").text = value
+
+
+def update_question_in_qti(
+    file_path,
+    *,
+    qid: str,
+    prompt: str,
+    choices: Dict[str, str],
+    correct_answers: List[str],
+    question_type: str,
+    explanation: str = "",
+    domain: str = "",
+    objective: str = "",
+):
+    """Safely update one assessmentItem and atomically replace the XML file."""
+    path = Path(file_path)
+    tree = ET.parse(path)
+    root = tree.getroot()
+    item = next(
+        (elem for elem in root.iter()
+         if strip_ns(elem.tag) == "assessmentItem" and elem.attrib.get("identifier") == qid),
+        None,
+    )
+    if item is None:
+        raise ValueError(f"Question '{qid}' was not found in {path.name}")
+
+    prompt_elem = _first_descendant(item, "prompt")
+    if prompt_elem is None:
+        raise ValueError(f"Question '{qid}' has no editable prompt")
+    prompt_elem.clear()
+    prompt_elem.text = prompt
+
+    choice_elems = {
+        elem.attrib.get("identifier"): elem
+        for elem in item.iter()
+        if strip_ns(elem.tag) == "simpleChoice"
+    }
+    if set(choices) != set(choice_elems):
+        raise ValueError("Choice identifiers changed unexpectedly; add/remove choices is not enabled yet")
+    for identifier, text in choices.items():
+        elem = choice_elems[identifier]
+        elem.clear()
+        elem.attrib["identifier"] = identifier
+        elem.text = text
+
+    declaration = _first_descendant(item, "responseDeclaration")
+    if declaration is None:
+        raise ValueError(f"Question '{qid}' has no responseDeclaration")
+    declaration.attrib["cardinality"] = "multiple" if question_type == "multiple-choice" else "single"
+    correct_response = _first_descendant(declaration, "correctResponse")
+    if correct_response is None:
+        correct_response = ET.SubElement(declaration, "correctResponse")
+    for child in list(correct_response):
+        correct_response.remove(child)
+    for answer in correct_answers:
+        ET.SubElement(correct_response, "value").text = answer
+
+    interaction = _first_descendant(item, "choiceInteraction")
+    if interaction is not None:
+        interaction.attrib["maxChoices"] = str(len(correct_answers)) if question_type == "multiple-choice" else "1"
+
+    _set_metadata_field(item, "question_type", question_type)
+    _set_metadata_field(item, "domain", domain)
+    _set_metadata_field(item, "objective", objective)
+
+    feedback = _first_descendant(item, "feedbackBlock")
+    if explanation:
+        if feedback is None:
+            feedback = ET.SubElement(item, "feedbackBlock", {"outcomeIdentifier": "FEEDBACK", "identifier": "EXPLANATION", "showHide": "show"})
+        feedback.clear()
+        feedback.attrib.update({"outcomeIdentifier": "FEEDBACK", "identifier": "EXPLANATION", "showHide": "show"})
+        feedback.text = explanation
+    elif feedback is not None:
+        feedback.clear()
+        feedback.attrib.update({"outcomeIdentifier": "FEEDBACK", "identifier": "EXPLANATION", "showHide": "show"})
+
+    if hasattr(ET, "indent"):
+        ET.indent(tree, space="    ")
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    tree.write(temporary, encoding="utf-8", xml_declaration=True)
+    # Validate the complete edited bank before replacing the known-good XML.
+    load_qti_bank(temporary)
+    temporary.replace(path)

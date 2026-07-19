@@ -20,21 +20,23 @@
     <div class="alert alert-error">{{ error }}</div>
     {% endif %}
 
-    {% if quizzes %}
+    {% if banks %}
     <table class="quiz-table">
         <thead>
             <tr>
                 <th>Title</th>
                 <th>Identifier</th>
                 <th>File</th>
+                <th>Questions</th>
             </tr>
         </thead>
         <tbody>
-        {% for quiz in quizzes %}
+        {% for bank in banks %}
             <tr>
-                <td>{{ quiz[1] }}</td>
-                <td><code>{{ quiz[0] }}</code></td>
-                <td>{{ quiz[2] }}</td>
+                <td><a href="/qb-manage/bank/{{ bank[0] }}">{{ bank[1] }}</a></td>
+                <td><code>{{ bank[0] }}</code></td>
+                <td>{{ bank[2] }}</td>
+                <td>{{ bank[3] }}</td>
             </tr>
         {% endfor %}
         </tbody>

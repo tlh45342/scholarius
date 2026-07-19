@@ -65,3 +65,35 @@ Private project.
 # Author
 
 Thomas Hamilton
+
+---
+
+# Question Bank and Assessment Goals
+
+Scholarius treats XML as the authoritative, portable representation of a
+question bank. SQLite may be used as a working index for searching and editing,
+but changes made through the editor must ultimately be written safely back to
+the bank XML before they become authoritative.
+
+A **question bank** is the master collection of reusable questions. One bank
+may also define several named **test versions**, such as Practice Test A,
+Practice Test B, and Practice Test C. Each test version references questions
+from the master bank instead of maintaining duplicate copies of the questions.
+
+Scholarius is intended to support these question types:
+
+1. **True/False** — choose one of two Boolean responses.
+2. **Single Choice** — select exactly one answer from a set of choices.
+3. **Multiple Response** — select two or more correct answers from a set of
+   choices. The required number of selections may be fixed or declared by the
+   question.
+4. **Matching** — associate each item on the left with an item on the right.
+5. **Ordering** — arrange a set of items into the correct sequence.
+
+True/False, Single Choice, and Multiple Response are the initial implementation
+priority. Matching and Ordering remain project goals, but their XML model,
+editing interface, scoring behavior, keyboard operation, and accessible
+non-drag alternatives should be designed before implementation.
+
+See [`docs/QUESTION_BANK_MODEL.md`](docs/QUESTION_BANK_MODEL.md) for the
+current terminology and design decisions.

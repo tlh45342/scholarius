@@ -201,3 +201,14 @@ curl -k https://localhost:8000/version
 ---
 
 **Ready to integrate. All files provided in ZIP.** ✅
+
+## Question-bank XML consolidation repair
+
+- XML is now the authoritative question-bank representation.
+- Importing a bank also rebuilds the SQLite editor index.
+- Existing registered XML banks are re-indexed at application startup.
+- Question-bank editor routes now use the `/qb-manage` route family.
+- Editing a question updates and validates XML atomically, then refreshes SQLite.
+- True/False, Single Choice, and Multiple Response are accepted by import validation.
+- Corrected the invalid `quizzes.quiz_id` query and repaired editor template contracts.
+- Question deletion remains intentionally disabled until XML-safe deletion is implemented.

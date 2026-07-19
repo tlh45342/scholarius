@@ -1,12 +1,12 @@
-# Multi-Choice Support Integration Guide
+# Multiple Response Support Integration Guide
 
 **Status:** Ready to integrate  
-**Feature:** Multiple-choice questions (select 2+ correct answers)  
+**Feature:** Multiple Response questions (select 2+ correct answers)  
 **Time to integrate:** ~20 minutes  
 
 ## Overview
 
-This adds full support for **multiple-choice questions** where students select 2 or more correct answers. Examples:
+This adds support for **Multiple Response questions** where students select 2 or more correct answers. Examples:
 
 > "Which TWO actions can you perform? Each correct answer presents a complete solution."
 > - ☑ Action A
@@ -230,7 +230,7 @@ Both are automatically detected and handled.
 
 - No visual question preview yet (LEVEL 2)
 - No bulk edit for question types (LEVEL 2)
-- Matching and Order Selection are stored but editing UI is basic (LEVEL 2)
+- Matching and Ordering remain roadmap goals and require a deliberate data, scoring, and interaction design (LEVEL 2)
 - No scoring rules defined yet for multi-choice (e.g., partial credit)
 
 ## Files Reference

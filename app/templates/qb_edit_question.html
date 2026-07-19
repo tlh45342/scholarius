@@ -155,8 +155,11 @@
             </div>
         </div>
 
+        {% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+        {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
         <div class="edit-form">
-            <form method="post" action="/qb-manage/edit/{{ question.id }}">
+            <form method="post" action="/qb-manage/question/{{ question.id }}">
                 
                 <!-- Question Content Section -->
                 <div class="form-section">
@@ -281,10 +284,10 @@
             
             const descriptions = {
                 'single-choice': 'Single-choice (Multiple Choice). Students select one correct answer from the options.',
-                'multiple-choice': 'Multiple-choice. Students select TWO or more correct answers. Each correct answer contributes to the score.',
+                'multiple-choice': 'Multiple Response. Students select two or more correct answers.',
                 'true-false': 'True/False. Students select between two binary options.',
-                'matching': 'Matching. Students match items from one column to another.',
-                'order-select': 'Order Selection. Students arrange given items in the correct sequence.'
+                'matching': 'Matching is a planned question type.',
+                'order-select': 'Ordering is a planned question type.'
             };
             
             info.textContent = descriptions[type] || 'Select a question type';

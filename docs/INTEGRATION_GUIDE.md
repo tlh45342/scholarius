@@ -7,7 +7,7 @@ This guide walks you through integrating the LEVEL 1 Question Bank Editor into S
 The editor provides:
 - ✅ Question bank listing (card view)
 - ✅ Question filtering (by domain, type)
-- ✅ Edit questions (True/False, Multiple Choice, Matching, Order Selection)
+- ✅ Edit questions (current target: True/False, Single Choice, and Multiple Response; Matching and Ordering require further design)
 - ✅ Add/delete questions
 - ✅ Store explanation/review text
 - ✅ Domain/objective assignment
@@ -223,7 +223,7 @@ scholarius/
 
 - Cannot create new questions (only edit imported ones)
 - Cannot create new domains/objectives (only assign existing)
-- Matching and Order Selection types are stored but UI is basic
+- Matching and Ordering are roadmap goals; storage, scoring, editing, and accessible interactions require further design
 - No image support in questions yet
 - No bulk operations (edit multiple questions at once)
 

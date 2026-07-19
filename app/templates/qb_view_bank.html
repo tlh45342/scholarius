@@ -87,7 +87,8 @@
             margin-bottom: 1rem;
             opacity: 0.5;
         }
-        .type-single-choice::before { content: "MC"; }
+        .type-single-choice::before { content: "SC"; }
+        .type-multiple-choice::before { content: "MR"; }
         .type-true-false::before { content: "T/F"; }
         .type-matching::before { content: "MATCH"; }
         .type-order-select::before { content: "ORD"; }
@@ -168,11 +169,8 @@
                         </div>
 
                         <div class="btn-actions">
-                            <a href="/qb-manage/edit/{{ q.id }}" class="btn btn-sm btn-primary">Edit</a>
-                            <form method="post" action="/qb-manage/delete/{{ q.id }}" style="display: inline;" 
-                                  onsubmit="return confirm('Delete this question?');">
-                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                            </form>
+                            <a href="/qb-manage/question/{{ q.id }}" class="btn btn-sm btn-primary">Edit</a>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="XML-safe deletion is planned">Delete</button>
                         </div>
                     </div>
                 </div>

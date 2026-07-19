@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from app.auth import hash_password, verify_password
 from app.db import get_conn, init_db
 from app.engine import QuizEngine
-from app.parser_qti import load_qti_bank
+from app.parser_qti import load_qti_bank, store_question_bank_to_db
 from app.selector import build_test, largest_remainder_counts
 from app.version import PRODUCT_NAME, __version__, version_info
 from app.routes_qb_editor import add_qb_routes
@@ -26,6 +26,26 @@ QTI_DIR = BASE_DIR / "qti"
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+
+def sync_registered_question_banks():
+    """Rebuild the editor index for XML banks already registered in quizzes."""
+    conn = get_conn()
+    try:
+        registered = conn.execute("SELECT id, filename FROM quizzes").fetchall()
+    finally:
+        conn.close()
+    for row in registered:
+        xml_path = QTI_DIR / row["filename"]
+        if not xml_path.exists():
+            continue
+        try:
+            store_question_bank_to_db(load_qti_bank(xml_path), filename=row["filename"])
+        except Exception as exc:
+            print(f"Question-bank index warning for {row['id']}: {exc}")
+
+
+sync_registered_question_banks()
 
 SESSIONS = {}
 SESSION_INDEX = {}
@@ -50,8 +70,9 @@ def redirect_to_login():
 def is_admin(session):
     return isinstance(session, dict) and session.get("role") == "admin"
 
-# Integrate Question Bank Editor Routes
-add_qb_routes(app, templates, is_admin, session_user)
+
+# Integrate Question Bank Editor Routes after helpers and paths exist.
+add_qb_routes(app, templates, is_admin, session_user, QTI_DIR)
 
 
 def user_count():
@@ -267,16 +288,29 @@ def inspect_qti_xml(data: bytes):
             problems.append(f"{qid}: missing prompt")
         elif len(choices) < 2:
             problems.append(f"{qid}: fewer than two choices")
-        elif len(correct_values) != 1:
-            problems.append(f"{qid}: requires exactly one correct answer")
-        elif correct_values[0] not in choice_ids:
-            problems.append(f"{qid}: correct answer does not match a choice")
         else:
-            supported += 1
+            declaration = next(
+                (elem for elem in item.iter() if local_name(elem.tag) == "responseDeclaration"),
+                None,
+            )
+            cardinality = declaration.attrib.get("cardinality", "single") if declaration is not None else "single"
+            if cardinality == "multiple":
+                if len(correct_values) < 2:
+                    problems.append(f"{qid}: Multiple Response requires at least two correct answers")
+                elif any(value not in choice_ids for value in correct_values):
+                    problems.append(f"{qid}: a correct answer does not match a choice")
+                else:
+                    supported += 1
+            elif len(correct_values) != 1:
+                problems.append(f"{qid}: requires exactly one correct answer")
+            elif correct_values[0] not in choice_ids:
+                problems.append(f"{qid}: correct answer does not match a choice")
+            else:
+                supported += 1
 
     if supported == 0:
         detail = "; ".join(problems[:5])
-        raise ValueError("No supported single-answer questions were found." + (f" {detail}" if detail else ""))
+        raise ValueError("No supported questions were found." + (f" {detail}" if detail else ""))
 
     return quiz_id, title, supported, problems
 
@@ -321,7 +355,7 @@ def qb_list_page(request: Request, message: str = "", error: str = ""):
     try:
         quizzes = conn.execute(
             """
-            SELECT quiz_id, title, filename
+            SELECT id, title, filename
             FROM quizzes
             ORDER BY title COLLATE NOCASE
             """
@@ -415,17 +449,11 @@ def qb_create_page(request: Request):
     )
 
 
-@app.get("/qb-manage/edit", response_class=HTMLResponse)
+@app.get("/qb-manage/edit")
 def qb_edit_page(request: Request):
-    return render_qb_placeholder(
-        request,
-        title="Edit Question Bank",
-        description=(
-            "Edit will allow an installed bank, its metadata, and its "
-            "questions to be revised."
-        ),
-        symbol="✎",
-    )
+    if not is_admin(session_user(request)):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    return RedirectResponse(url="/qb-manage/banks", status_code=303)
 
 
 @app.post("/qb-manage/import")
@@ -488,6 +516,19 @@ async def import_quiz(
     QTI_DIR.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(".xml.tmp")
     temporary.write_bytes(data)
+    try:
+        parsed_bank = load_qti_bank(temporary)
+        if not parsed_bank.questions:
+            raise ValueError("No supported questions were found after parsing.")
+        store_question_bank_to_db(parsed_bank, filename=filename)
+    except Exception as exc:
+        temporary.unlink(missing_ok=True)
+        conn.close()
+        from urllib.parse import quote_plus
+        return RedirectResponse(
+            url=f"/qb-manage/import?error={quote_plus('Import failed: ' + str(exc))}",
+            status_code=303,
+        )
     temporary.replace(destination)
 
     if existing and existing[0] != filename:

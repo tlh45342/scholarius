@@ -1,276 +1,231 @@
-"""
-Scholarius Question Bank Editor Routes (Optional Integration)
+"""Question-bank editor routes.
 
-These routes enable advanced question bank management including:
-- Question listing by bank
-- Question editing
-- Question creation
-- Question deletion
-
-STATUS: Currently NOT integrated into main.py
-INTEGRATION: See integration instructions below
+XML remains the authoritative question-bank representation. SQLite is an
+editable index. Every successful editor save is written back to XML before the
+index is refreshed.
 """
 
-from datetime import datetime
+from pathlib import Path
 from typing import Optional
-import json
-from fastapi import FastAPI, Request, Form, UploadFile, File, HTTPException
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 
 from app.db import get_conn
+from app.parser_qti import (
+    get_question_by_id,
+    load_qti_bank,
+    store_question_bank_to_db,
+    update_question_in_qti,
+)
 
 
-def add_qb_routes(app: FastAPI, templates, is_admin, session_user):
-    """
-    Add question bank editor routes to the FastAPI app.
-    
-    Call this in main.py after app initialization:
-    
-        from app.routes_qb_editor import add_qb_routes
-        add_qb_routes(app, templates, is_admin, session_user)
-    """
-
-    # ========================================================================
-    # Question Bank Listing
-    # ========================================================================
-
-    @app.get("/qb-editor/banks", response_class=HTMLResponse)
-    def qb_list_banks(request: Request):
-        """List all imported question banks."""
+def add_qb_routes(app: FastAPI, templates, is_admin, session_user, qti_dir: Path):
+    def require_admin(request: Request):
         session = session_user(request)
         if not session or not is_admin(session):
-            return RedirectResponse(url="/login", status_code=303)
+            return None
+        return session
 
+    @app.get("/qb-manage/banks", response_class=HTMLResponse)
+    def qb_list_banks(request: Request):
+        session = require_admin(request)
+        if not session:
+            return RedirectResponse(url="/login", status_code=303)
         conn = get_conn()
         try:
             banks = conn.execute(
-                "SELECT bank_id, title, question_count, imported_at FROM question_banks ORDER BY imported_at DESC"
+                """SELECT bank_id, title, filename, question_count, imported_at
+                   FROM question_banks ORDER BY title COLLATE NOCASE"""
             ).fetchall()
         finally:
             conn.close()
-
         return templates.TemplateResponse(
             request,
-            "qb_list_banks.html",
+            "qb_list.html",
             {
                 "request": request,
                 "banks": banks,
+                "display_name": session.get("display_name"),
                 "is_admin": True,
             },
         )
 
-    # ========================================================================
-    # View Questions in Bank
-    # ========================================================================
-
-    @app.get("/qb-editor/bank/{bank_id}", response_class=HTMLResponse)
+    @app.get("/qb-manage/bank/{bank_id}", response_class=HTMLResponse)
     def qb_view_bank(
         request: Request,
         bank_id: str,
         domain: Optional[str] = None,
-        question_type: Optional[str] = None,
+        type: Optional[str] = None,
     ):
-        """View all questions in a bank with optional filtering."""
-        session = session_user(request)
-        if not session or not is_admin(session):
+        session = require_admin(request)
+        if not session:
             return RedirectResponse(url="/login", status_code=303)
-
         conn = get_conn()
         try:
-            # Get bank info
             bank = conn.execute(
-                "SELECT bank_id, title, question_count FROM question_banks WHERE bank_id = ?",
+                "SELECT bank_id, title, filename, question_count FROM question_banks WHERE bank_id=?",
                 (bank_id,),
             ).fetchone()
-
             if not bank:
-                raise HTTPException(status_code=404, detail="Bank not found")
-
-            # Get questions with optional filters
-            query = "SELECT id, prompt, question_type, domain, objective FROM questions WHERE bank_id = ?"
+                raise HTTPException(status_code=404, detail="Question bank not found")
+            sql = """SELECT id, qid, prompt, question_type, domain, objective
+                     FROM questions WHERE bank_id=?"""
             params = [bank_id]
-
             if domain:
-                query += " AND domain = ?"
+                sql += " AND domain=?"
                 params.append(domain)
-
-            if question_type:
-                query += " AND question_type = ?"
-                params.append(question_type)
-
-            query += " ORDER BY id"
-
-            questions = conn.execute(query, params).fetchall()
-
-            # Get unique domains and types
-            all_domains = conn.execute(
-                "SELECT DISTINCT domain FROM questions WHERE bank_id = ? AND domain IS NOT NULL",
+            if type:
+                sql += " AND question_type=?"
+                params.append(type)
+            sql += " ORDER BY qid COLLATE NOCASE"
+            questions = conn.execute(sql, params).fetchall()
+            domains = [r[0] for r in conn.execute(
+                "SELECT DISTINCT domain FROM questions WHERE bank_id=? AND domain<>'' ORDER BY domain",
                 (bank_id,),
-            ).fetchall()
-
-            all_types = conn.execute(
-                "SELECT DISTINCT question_type FROM questions WHERE bank_id = ?",
+            ).fetchall()]
+            types = [r[0] for r in conn.execute(
+                "SELECT DISTINCT question_type FROM questions WHERE bank_id=? ORDER BY question_type",
                 (bank_id,),
-            ).fetchall()
-
+            ).fetchall()]
         finally:
             conn.close()
-
         return templates.TemplateResponse(
             request,
             "qb_view_bank.html",
             {
                 "request": request,
                 "bank": bank,
+                "bank_id": bank["bank_id"],
+                "bank_title": bank["title"],
                 "questions": questions,
-                "all_domains": [d[0] for d in all_domains],
-                "all_types": [t[0] for t in all_types],
+                "domains": domains,
+                "types": types,
                 "selected_domain": domain,
-                "selected_type": question_type,
+                "selected_type": type,
+                "display_name": session.get("display_name"),
                 "is_admin": True,
             },
         )
 
-    # ========================================================================
-    # Edit Question
-    # ========================================================================
-
-    @app.get("/qb-editor/question/{question_id}", response_class=HTMLResponse)
-    def qb_edit_question_form(request: Request, question_id: int):
-        """Display question editor form."""
-        session = session_user(request)
-        if not session or not is_admin(session):
+    @app.get("/qb-manage/question/{question_id}", response_class=HTMLResponse)
+    def qb_edit_question_form(request: Request, question_id: int, message: str = "", error: str = ""):
+        session = require_admin(request)
+        if not session:
             return RedirectResponse(url="/login", status_code=303)
-
+        question = get_question_by_id(question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
         conn = get_conn()
         try:
-            question = conn.execute(
-                "SELECT id, prompt, question_type, correct_answer, explanation, domain, objective FROM questions WHERE id = ?",
-                (question_id,),
-            ).fetchone()
-
-            if not question:
-                raise HTTPException(status_code=404, detail="Question not found")
-
-            choices = conn.execute(
-                "SELECT identifier, choice_text FROM question_choices WHERE question_id = ? ORDER BY identifier",
-                (question_id,),
-            ).fetchall()
-
+            domains = [r[0] for r in conn.execute(
+                "SELECT DISTINCT domain FROM questions WHERE bank_id=? AND domain<>'' ORDER BY domain",
+                (question["bank_id"],),
+            ).fetchall()]
         finally:
             conn.close()
-
         return templates.TemplateResponse(
             request,
             "qb_edit_question.html",
             {
                 "request": request,
                 "question": question,
-                "choices": choices,
+                "domains": domains,
+                "question_types": ["true-false", "single-choice", "multiple-choice"],
+                "display_name": session.get("display_name"),
+                "message": message,
+                "error": error,
                 "is_admin": True,
             },
         )
 
-    @app.post("/qb-editor/question/{question_id}")
-    def qb_save_question(
-        request: Request,
-        question_id: int,
-        prompt: str = Form(...),
-        question_type: str = Form(default="single-choice"),
-        correct_answer: str = Form(default=""),
-        explanation: str = Form(default=""),
-        domain: str = Form(default=""),
-        objective: str = Form(default=""),
-    ):
-        """Save changes to a question."""
-        session = session_user(request)
-        if not session or not is_admin(session):
-            raise HTTPException(status_code=403, detail="Admin access required")
-
-        conn = get_conn()
-        try:
-            # Update question
-            conn.execute(
-                """UPDATE questions 
-                   SET prompt = ?, question_type = ?, correct_answer = ?, 
-                       explanation = ?, domain = ?, objective = ?
-                   WHERE id = ?""",
-                (prompt, question_type, correct_answer, explanation, domain, objective, question_id),
-            )
-            conn.commit()
-        finally:
-            conn.close()
-
-        return RedirectResponse(url="/qb-editor/question/" + str(question_id), status_code=303)
-
-    # ========================================================================
-    # Delete Question
-    # ========================================================================
-
-    @app.post("/qb-editor/question/{question_id}/delete")
-    def qb_delete_question(request: Request, question_id: int):
-        """Delete a question."""
-        session = session_user(request)
-        if not session or not is_admin(session):
-            raise HTTPException(status_code=403, detail="Admin access required")
-
-        conn = get_conn()
-        try:
-            conn.execute("DELETE FROM question_choices WHERE question_id = ?", (question_id,))
-            conn.execute("DELETE FROM questions WHERE id = ?", (question_id,))
-            conn.commit()
-        finally:
-            conn.close()
-
-        return JSONResponse({"status": "deleted"})
-
-    # ========================================================================
-    # API Endpoints
-    # ========================================================================
-
-    @app.get("/qb-editor/api/questions", response_class=JSONResponse)
-    def qb_api_questions(
-        request: Request,
-        bank_id: Optional[str] = None,
-        domain: Optional[str] = None,
-        question_type: Optional[str] = None,
-    ):
-        """JSON API for filtered questions."""
-        session = session_user(request)
-        if not session or not is_admin(session):
-            raise HTTPException(status_code=403, detail="Admin access required")
-
-        conn = get_conn()
-        try:
-            query = "SELECT id, prompt, question_type, domain, objective FROM questions WHERE 1=1"
-            params = []
-
-            if bank_id:
-                query += " AND bank_id = ?"
-                params.append(bank_id)
-
-            if domain:
-                query += " AND domain = ?"
-                params.append(domain)
-
-            if question_type:
-                query += " AND question_type = ?"
-                params.append(question_type)
-
-            questions = conn.execute(query, params).fetchall()
-
-        finally:
-            conn.close()
-
-        return {
-            "questions": [
-                {
-                    "id": q[0],
-                    "prompt": q[1],
-                    "type": q[2],
-                    "domain": q[3],
-                    "objective": q[4],
-                }
-                for q in questions
-            ]
+    @app.post("/qb-manage/question/{question_id}")
+    async def qb_save_question(request: Request, question_id: int):
+        session = require_admin(request)
+        if not session:
+            raise HTTPException(status_code=403, detail="Administrator access required")
+        question = get_question_by_id(question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+        form = await request.form()
+        prompt = str(form.get("prompt", "")).strip()
+        question_type = str(form.get("question_type", "single-choice"))
+        explanation = str(form.get("explanation", "")).strip()
+        domain = str(form.get("domain", "")).strip()
+        objective = str(form.get("objective", "")).strip()
+        if question_type not in {"true-false", "single-choice", "multiple-choice"}:
+            raise HTTPException(status_code=400, detail="Unsupported question type")
+        choices = {
+            identifier: str(form.get(f"choice_{identifier}", "")).strip()
+            for identifier in question["choices"]
         }
+        if not prompt or len([v for v in choices.values() if v]) < 2:
+            raise HTTPException(status_code=400, detail="A prompt and at least two choices are required")
+        if question_type == "multiple-choice":
+            correct_answers = [
+                identifier for identifier in choices
+                if form.get(f"correct_{identifier}") is not None
+            ]
+            if len(correct_answers) < 2:
+                raise HTTPException(status_code=400, detail="Multiple Response requires at least two correct choices")
+        else:
+            correct = str(form.get("correct_answer", "")).strip()
+            correct_answers = [correct] if correct else []
+            if len(correct_answers) != 1 or correct_answers[0] not in choices:
+                raise HTTPException(status_code=400, detail="Select one correct answer")
+
+        conn = get_conn()
+        try:
+            bank = conn.execute(
+                "SELECT filename FROM question_banks WHERE bank_id=?",
+                (question["bank_id"],),
+            ).fetchone()
+        finally:
+            conn.close()
+        if not bank:
+            raise HTTPException(status_code=500, detail="Question bank registry is missing")
+        xml_path = qti_dir / bank["filename"]
+        update_question_in_qti(
+            xml_path,
+            qid=question["qid"],
+            prompt=prompt,
+            choices=choices,
+            correct_answers=correct_answers,
+            question_type=question_type,
+            explanation=explanation,
+            domain=domain,
+            objective=objective,
+        )
+        refreshed = load_qti_bank(xml_path)
+        store_question_bank_to_db(refreshed, filename=bank["filename"])
+        return RedirectResponse(
+            url=f"/qb-manage/question/{question_id}?message=Question+saved+to+XML",
+            status_code=303,
+        )
+
+    @app.post("/qb-manage/question/{question_id}/delete")
+    def qb_delete_question(request: Request, question_id: int):
+        # Deletion is intentionally deferred until XML-safe deletion and bank
+        # minimum-size behavior are designed. Avoid a database-only delete.
+        if not require_admin(request):
+            raise HTTPException(status_code=403, detail="Administrator access required")
+        return JSONResponse(
+            {"status": "not_implemented", "detail": "XML-safe deletion is not enabled yet."},
+            status_code=501,
+        )
+
+    @app.get("/qb-manage/api/questions", response_class=JSONResponse)
+    def qb_api_questions(request: Request, bank_id: Optional[str] = None):
+        if not require_admin(request):
+            raise HTTPException(status_code=403, detail="Administrator access required")
+        conn = get_conn()
+        try:
+            sql = "SELECT id, qid, bank_id, prompt, question_type, domain, objective FROM questions"
+            params = []
+            if bank_id:
+                sql += " WHERE bank_id=?"
+                params.append(bank_id)
+            rows = conn.execute(sql, params).fetchall()
+        finally:
+            conn.close()
+        return {"questions": [dict(row) for row in rows]}
