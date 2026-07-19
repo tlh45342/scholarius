@@ -317,7 +317,7 @@ def qb_list_page(request: Request, message: str = "", error: str = ""):
     try:
         quizzes = conn.execute(
             """
-            SELECT quiz_id, title, filename
+            SELECT id, title, filename
             FROM quizzes
             ORDER BY title COLLATE NOCASE
             """
