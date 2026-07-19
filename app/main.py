@@ -15,6 +15,7 @@ from app.engine import QuizEngine
 from app.parser_qti import load_qti_bank
 from app.selector import build_test, largest_remainder_counts
 from app.version import PRODUCT_NAME, __version__, version_info
+from app.cert import ensure_ssl_certs
 
 app = FastAPI(title=PRODUCT_NAME, version=__version__)
 init_db()
