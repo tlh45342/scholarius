@@ -854,3 +854,22 @@ def results_ui(request: Request):
             "is_admin": is_admin(session),
         },
     )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    from app.cert import ensure_ssl_certs
+    
+    cert_file, key_file = ensure_ssl_certs()
+    
+    print("\n" + "="*70)
+    print(f"Scholarius starting on https://0.0.0.0:8000")
+    print("="*70 + "\n")
+    
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        ssl_keyfile=key_file,
+        ssl_certfile=cert_file
+    )
