@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Bank - {{ bank_title }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        .question-card {
+            border-left: 4px solid #667eea;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            transition: box-shadow 0.2s;
+        }
+        .question-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+        }
+        .question-card .card-body {
+            padding: 1rem;
+        }
+        .question-type-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .card-title {
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        .card-text.prompt {
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            color: #34495e;
+        }
+        .metadata {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 0.75rem;
+        }
+        .metadata span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .btn-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-actions .btn {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        .filter-section {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+        .filter-section h6 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        .header-section {
+            margin-bottom: 2rem;
+        }
+        .header-section h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #7f8c8d;
+        }
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        .type-single-choice::before { content: "MC"; }
+        .type-true-false::before { content: "T/F"; }
+        .type-matching::before { content: "MATCH"; }
+        .type-order-select::before { content: "ORD"; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Scholarius</a>
+            <div class="navbar-nav ms-auto">
+                <span class="nav-item">{{ display_name }}</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <h1>{{ bank_title }}</h1>
+            <p class="text-muted">Manage and edit questions in this bank</p>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <h6>🔍 Filter Questions</h6>
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <select name="domain" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Domains</option>
+                        {% for domain in domains %}
+                        <option value="{{ domain }}" {% if domain == selected_domain %}selected{% endif %}>
+                            {{ domain }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <select name="type" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Question Types</option>
+                        {% for qtype in types %}
+                        <option value="{{ qtype }}" {% if qtype == selected_type %}selected{% endif %}>
+                            {{ qtype|replace('-', ' ')|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if selected_domain or selected_type %}
+                <div class="col-12">
+                    <a href="/qb-manage/bank/{{ bank_id }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Questions List -->
+        {% if questions %}
+        <div class="questions-container">
+            {% for q in questions %}
+            <div class="card question-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title">{{ q.qid }}</h6>
+                            <p class="card-text prompt">{{ q.prompt[:150] }}{% if q.prompt|length > 150 %}...{% endif %}</p>
+                            
+                            <div class="metadata">
+                                <span>
+                                    <strong class="question-type-badge type-{{ q.question_type }}">
+                                        {{ q.question_type|replace('-', ' ')|title }}
+                                    </strong>
+                                </span>
+                                {% if q.domain %}
+                                <span title="Domain">📂 {{ q.domain }}</span>
+                                {% endif %}
+                                {% if q.objective %}
+                                <span title="Objective">🎯 {{ q.objective }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="btn-actions">
+                            <a href="/qb-manage/edit/{{ q.id }}" class="btn btn-sm btn-primary">Edit</a>
+                            <form method="post" action="/qb-manage/delete/{{ q.id }}" style="display: inline;" 
+                                  onsubmit="return confirm('Delete this question?');">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body empty-state">
+                <div class="empty-state-icon">📭</div>
+                <h5>No Questions Found</h5>
+                <p>Try adjusting your filters</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <a href="/qb-manage" class="btn btn-secondary">← Back to Banks</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

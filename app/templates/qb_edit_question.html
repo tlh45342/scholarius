@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Question - {{ question.qid }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        .edit-form {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .form-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .form-section h5 {
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 0.5rem;
+        }
+        .form-control, .form-select {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 0.75rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .choice-input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .choice-input-group input[type="text"] {
+            flex-grow: 1;
+        }
+        .choice-label {
+            min-width: 40px;
+            font-weight: 600;
+            color: #667eea;
+        }
+        .choice-correct-indicator {
+            min-width: 80px;
+            text-align: center;
+        }
+        .choice-correct-indicator input {
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+        }
+        .choice-correct-indicator label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn-group-action {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+        .header-section {
+            margin-bottom: 2rem;
+        }
+        .header-section h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .question-meta {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 1rem;
+        }
+        .question-meta span strong {
+            color: #34495e;
+        }
+        .help-text {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 0.25rem;
+        }
+        .type-info {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        .type-info.multichoice {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+        .type-info.trueFalse {
+            background: #fff3e0;
+            border-left-color: #ff9800;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">Scholarius</a>
+            <div class="navbar-nav ms-auto">
+                <span class="nav-item">{{ display_name }}</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <h1>✏️ Edit Question</h1>
+            <div class="question-meta">
+                <span><strong>ID:</strong> {{ question.qid }}</span>
+                <span><strong>Bank:</strong> {{ question.bank_id }}</span>
+            </div>
+        </div>
+
+        <div class="edit-form">
+            <form method="post" action="/qb-manage/edit/{{ question.id }}">
+                
+                <!-- Question Content Section -->
+                <div class="form-section">
+                    <h5>📝 Question Content</h5>
+                    
+                    <div class="form-group">
+                        <label for="prompt" class="form-label">Question Prompt</label>
+                        <textarea class="form-control" id="prompt" name="prompt" required>{{ question.prompt }}</textarea>
+                        <div class="help-text">The main question text that students will see</div>
+                    </div>
+                </div>
+
+                <!-- Question Type Section -->
+                <div class="form-section">
+                    <h5>🎯 Question Type & Answers</h5>
+                    
+                    <div class="form-group">
+                        <label for="question_type" class="form-label">Question Type</label>
+                        <select class="form-select" id="question_type" name="question_type" onchange="updateTypeInfo()">
+                            {% for qtype in question_types %}
+                            <option value="{{ qtype }}" {% if qtype == question.question_type %}selected{% endif %}>
+                                {{ qtype|replace('-', ' ')|title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="type-info" id="type-info">
+                            <small id="type-description">Select a question type for more information</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Answer Choices</label>
+                        <div id="choices-container">
+                            {% if question.choices %}
+                                {% for identifier, text in question.choices.items() %}
+                                <div class="choice-input-group">
+                                    <div class="choice-label">{{ identifier }}</div>
+                                    <input type="text" class="form-control choice-text" 
+                                           name="choice_{{ identifier }}" value="{{ text }}" required>
+                                    <div class="choice-correct-indicator">
+                                        <div id="correct-wrapper-{{ identifier }}">
+                                            <!-- Will be populated by JavaScript based on question type -->
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="help-text" id="correct-help">
+                            For single-choice: select the radio button for the correct answer
+                        </div>
+                    </div>
+
+                    <!-- Hidden fields for correct answers -->
+                    <input type="hidden" id="correct_answer" name="correct_answer" 
+                           value="{{ question.correct_answer or '' }}">
+                </div>
+
+                <!-- Metadata Section -->
+                <div class="form-section">
+                    <h5>🏷️ Metadata</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="domain" class="form-label">Domain</label>
+                                <select class="form-select" id="domain" name="domain">
+                                    <option value="">Select Domain</option>
+                                    {% for domain in domains %}
+                                    <option value="{{ domain }}" 
+                                            {% if domain == question.domain %}selected{% endif %}>
+                                        {{ domain }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="help-text">Domain or competency area this question tests</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="objective" class="form-label">Objective</label>
+                                <input type="text" class="form-control" id="objective" name="objective" 
+                                       value="{{ question.objective or '' }}" placeholder="e.g., 2.1 Describe...">
+                                <div class="help-text">Learning objective this question aligns with</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explanation/Review Section -->
+                <div class="form-section">
+                    <h5>💡 Explanation & Review</h5>
+                    
+                    <div class="form-group">
+                        <label for="explanation" class="form-label">Why is this the correct answer?</label>
+                        <textarea class="form-control" id="explanation" name="explanation">{{ question.explanation or '' }}</textarea>
+                        <div class="help-text">Detailed explanation for student review after answering</div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="btn-group-action">
+                    <a href="/qb-manage/bank/{{ question.bank_id }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary btn-lg">💾 Save Changes</button>
+                </div>
+            </form>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <a href="/qb-manage/bank/{{ question.bank_id }}" class="btn btn-outline-secondary">← Back to Bank</a>
+        </div>
+    </div>
+
+    <script>
+        const correctAnswers = {% if question.correct_answers %}{{ question.correct_answers | tojson }}{% else %}[]{% endif %};
+        const singleCorrectAnswer = "{{ question.correct_answer or '' }}";
+
+        function updateTypeInfo() {
+            const type = document.getElementById('question_type').value;
+            const info = document.getElementById('type-description');
+            const helpText = document.getElementById('correct-help');
+            
+            const descriptions = {
+                'single-choice': 'Single-choice (Multiple Choice). Students select one correct answer from the options.',
+                'multiple-choice': 'Multiple-choice. Students select TWO or more correct answers. Each correct answer contributes to the score.',
+                'true-false': 'True/False. Students select between two binary options.',
+                'matching': 'Matching. Students match items from one column to another.',
+                'order-select': 'Order Selection. Students arrange given items in the correct sequence.'
+            };
+            
+            info.textContent = descriptions[type] || 'Select a question type';
+            
+            // Update help text for correct answers
+            if (type === 'multiple-choice') {
+                helpText.innerHTML = '<strong>Check the boxes</strong> for all correct answers (select 2+)';
+            } else if (type === 'true-false') {
+                helpText.innerHTML = '<strong>Select one:</strong> True or False';
+            } else {
+                helpText.innerHTML = '<strong>Select one:</strong> the radio button for the correct answer';
+            }
+            
+            // Rebuild correct answer inputs
+            rebuildCorrectAnswerControls(type);
+        }
+
+        function rebuildCorrectAnswerControls(type) {
+            // Rebuild the radio/checkbox controls for each choice
+            const letters = ['A', 'B', 'C', 'D'];
+            
+            for (const letter of letters) {
+                const wrapper = document.getElementById(`correct-wrapper-${letter}`);
+                if (!wrapper) continue;
+                
+                let html = '';
+                
+                if (type === 'multiple-choice') {
+                    // Checkboxes for multi-choice
+                    const isChecked = correctAnswers.includes(letter) ? 'checked' : '';
+                    html = `
+                        <input type="checkbox" name="correct_${letter}" value="${letter}" ${isChecked} 
+                               onchange="updateMultiCorrect()" style="cursor: pointer;">
+                        <label style="margin-left: 0.5rem; cursor: pointer;">✓</label>
+                    `;
+                } else {
+                    // Radio buttons for single-choice
+                    const isChecked = singleCorrectAnswer === letter ? 'checked' : '';
+                    html = `
+                        <input type="radio" name="correct_answer_radio" value="${letter}" ${isChecked}
+                               onchange="updateSingleCorrect()" style="cursor: pointer;">
+                        <label style="margin-left: 0.5rem; cursor: pointer;">✓</label>
+                    `;
+                }
+                
+                wrapper.innerHTML = html;
+            }
+        }
+
+        function updateSingleCorrect() {
+            const selected = document.querySelector('input[name="correct_answer_radio"]:checked');
+            if (selected) {
+                document.getElementById('correct_answer').value = selected.value;
+            }
+        }
+
+        function updateMultiCorrect() {
+            // Don't update hidden field for multi-choice - checkboxes are in form submission
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTypeInfo();
+        });
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

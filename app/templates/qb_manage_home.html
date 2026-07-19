@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Bank Management</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            height: 100%;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1.25rem;
+        }
+        .card-body {
+            padding: 1.25rem;
+        }
+        .bank-count {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .bank-subtitle {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .btn-group-vertical {
+            width: 100%;
+        }
+        .btn-group-vertical .btn {
+            border: 1px solid #dee2e6;
+        }
+        .header-section {
+            margin-bottom: 2rem;
+        }
+        .header-section h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .header-section p {
+            color: #7f8c8d;
+            margin: 0;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #7f8c8d;
+        }
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Scholarius</a>
+            <div class="navbar-nav ms-auto">
+                <span class="nav-item">{{ display_name }}</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <h1>📚 Question Bank Management</h1>
+            <p>Edit and manage question banks, create custom quizzes from filtered questions</p>
+        </div>
+
+        {% if banks %}
+        <div class="row">
+            {% for bank in banks %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="bank-count">{{ bank.question_count }}</div>
+                        <div class="bank-subtitle">Questions</div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ bank.title }}</h5>
+                        <p class="card-text text-muted small">
+                            <strong>ID:</strong> {{ bank.bank_id }}<br>
+                            <strong>Imported:</strong> {{ bank.imported_at[:10] }}
+                        </p>
+                        <div class="btn-group-vertical">
+                            <a href="/qb-manage/bank/{{ bank.bank_id }}" class="btn btn-primary btn-sm">
+                                View & Edit
+                            </a>
+                            <a href="/quiz?bank={{ bank.bank_id }}" class="btn btn-success btn-sm">
+                                Create Quiz
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body empty-state">
+                <div class="empty-state-icon">📭</div>
+                <h5>No Question Banks Yet</h5>
+                <p>Import a QTI/XML file to get started</p>
+                <a href="/qb-manage/import" class="btn btn-primary">Import Question Bank</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <a href="/" class="btn btn-secondary">← Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
