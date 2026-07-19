@@ -15,7 +15,6 @@ from app.engine import QuizEngine
 from app.parser_qti import load_qti_bank
 from app.selector import build_test, largest_remainder_counts
 from app.version import PRODUCT_NAME, __version__, version_info
-from app.cert import ensure_ssl_certs
 
 app = FastAPI(title=PRODUCT_NAME, version=__version__)
 init_db()
@@ -856,21 +855,30 @@ def results_ui(request: Request):
         },
     )
 
+# ============================================================================
+# Entry Point - SSL Certificate Management & Server Startup
+# ============================================================================
 
 if __name__ == "__main__":
     import uvicorn
     from app.cert import ensure_ssl_certs
     
+    # Ensure SSL certificates exist (creates on first run, reuses after)
     cert_file, key_file = ensure_ssl_certs()
     
     print("\n" + "="*70)
-    print(f"Scholarius starting on https://0.0.0.0:8000")
+    print(f"{PRODUCT_NAME} {__version__} - HTTPS Ready")
+    print("="*70)
+    print(f"🔐 Server: https://0.0.0.0:8000")
+    print(f"📁 Certificates: {cert_file}")
     print("="*70 + "\n")
     
+    # Run with HTTPS
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=8000,
         ssl_keyfile=key_file,
-        ssl_certfile=cert_file
+        ssl_certfile=cert_file,
+        log_level="info"
     )
