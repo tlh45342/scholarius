@@ -3,6 +3,31 @@
 Scholarius is a lightweight web-based quiz and study system written in Python and packaged as a Docker application.
 
 The goal of Scholarius is to provide an easy-to-deploy quiz platform suitable for classrooms, self-study, certification preparation, and technical training.
+
+---
+
+# Building
+
+Build the image:
+
+```bash
+docker build -t scholarius .
+```
+
+Verify:
+
+```bash
+docker image ls
+```
+
+Launch:
+
+```bash
+docker compose up -d
+```
+
+---
+
 ## Accessibility and project status
 
 Scholarius is a work in progress and is **not considered production-ready**.
