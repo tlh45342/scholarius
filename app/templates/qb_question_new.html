@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Question - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-theme="{{ theme|default('system') }}">
+<main class="container container-wide card-with-corner">
+    <h1>Add Question</h1>
+    <p>Add a single-answer multiple-choice question to <strong>{{ bank[1] }}</strong>.</p>
+
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+    <form action="/qb-manage/edit/{{ bank[0] }}/questions/new" method="post">
+        <div class="form-group">
+            <label for="question_id">Question identifier</label>
+            <input id="question_id" name="question_id" required maxlength="80"
+                   pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,79}" placeholder="q001">
+        </div>
+        <div class="form-group">
+            <label for="prompt">Question text</label>
+            <textarea id="prompt" name="prompt" rows="5" required></textarea>
+        </div>
+
+        <fieldset class="choice-fieldset">
+            <legend>Answer choices</legend>
+            <div class="form-group"><label for="choice_a">Choice A</label><input id="choice_a" name="choice_a" required></div>
+            <div class="form-group"><label for="choice_b">Choice B</label><input id="choice_b" name="choice_b" required></div>
+            <div class="form-group"><label for="choice_c">Choice C</label><input id="choice_c" name="choice_c"></div>
+            <div class="form-group"><label for="choice_d">Choice D</label><input id="choice_d" name="choice_d"></div>
+        </fieldset>
+
+        <div class="form-group">
+            <label for="correct_choice">Correct choice</label>
+            <select id="correct_choice" name="correct_choice" required>
+                <option value="1">A</option>
+                <option value="2">B</option>
+                <option value="3">C</option>
+                <option value="4">D</option>
+            </select>
+        </div>
+        <div class="form-group"><label for="domain">Domain</label><input id="domain" name="domain"></div>
+        <div class="form-group"><label for="objective">Objective</label><input id="objective" name="objective"></div>
+
+        <button class="button button-primary button-space" type="submit">Add Question</button>
+    </form>
+
+    <a class="card-corner-icon" href="/qb-manage/edit/{{ bank[0] }}" aria-label="Back to bank editor" title="Back">‹</a>
+</main>
+{% include "_corner_nav.html" %}
+</body>
+</html>

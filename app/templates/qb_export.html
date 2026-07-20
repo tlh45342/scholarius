@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Question Bank - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-theme="{{ theme|default('system') }}">
+<main class="container container-wide card-with-corner">
+    <h1>Export Question Bank</h1>
+    <p>Download the current QTI/XML version of an installed bank.</p>
+
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+    {% if quizzes %}
+    <div class="bank-action-list">
+        {% for bank in quizzes %}
+        <div class="bank-action-row">
+            <div>
+                <strong>{{ bank[1] }}</strong>
+                <div class="bank-identifier">{{ bank[0] }}</div>
+            </div>
+            <a class="button button-primary compact-action" href="/qb-manage/export/{{ bank[0] }}">Export</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><strong>No question banks are installed.</strong></div>
+    {% endif %}
+
+    <a class="card-corner-icon" href="/qb-manage" aria-label="Back to question bank management" title="Back">‹</a>
+</main>
+{% include "_corner_nav.html" %}
+</body>
+</html>

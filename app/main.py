@@ -3,19 +3,19 @@ from datetime import datetime, timezone
 import re
 import uuid
 import xml.etree.ElementTree as ET
+from urllib.parse import quote_plus
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.auth import hash_password, verify_password
 from app.db import get_conn, init_db
 from app.engine import QuizEngine
-from app.parser_qti import load_qti_bank, store_question_bank_to_db
+from app.parser_qti import load_qti_bank
 from app.selector import build_test, largest_remainder_counts
 from app.version import PRODUCT_NAME, __version__, version_info
-from app.routes_qb_editor import add_qb_routes
 
 app = FastAPI(title=PRODUCT_NAME, version=__version__)
 init_db()
@@ -26,26 +26,6 @@ QTI_DIR = BASE_DIR / "qti"
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
-
-
-def sync_registered_question_banks():
-    """Rebuild the editor index for XML banks already registered in quizzes."""
-    conn = get_conn()
-    try:
-        registered = conn.execute("SELECT id, filename FROM quizzes").fetchall()
-    finally:
-        conn.close()
-    for row in registered:
-        xml_path = QTI_DIR / row["filename"]
-        if not xml_path.exists():
-            continue
-        try:
-            store_question_bank_to_db(load_qti_bank(xml_path), filename=row["filename"])
-        except Exception as exc:
-            print(f"Question-bank index warning for {row['id']}: {exc}")
-
-
-sync_registered_question_banks()
 
 SESSIONS = {}
 SESSION_INDEX = {}
@@ -69,10 +49,6 @@ def redirect_to_login():
 
 def is_admin(session):
     return isinstance(session, dict) and session.get("role") == "admin"
-
-
-# Integrate Question Bank Editor Routes after helpers and paths exist.
-add_qb_routes(app, templates, is_admin, session_user, QTI_DIR)
 
 
 def user_count():
@@ -288,29 +264,16 @@ def inspect_qti_xml(data: bytes):
             problems.append(f"{qid}: missing prompt")
         elif len(choices) < 2:
             problems.append(f"{qid}: fewer than two choices")
+        elif len(correct_values) != 1:
+            problems.append(f"{qid}: requires exactly one correct answer")
+        elif correct_values[0] not in choice_ids:
+            problems.append(f"{qid}: correct answer does not match a choice")
         else:
-            declaration = next(
-                (elem for elem in item.iter() if local_name(elem.tag) == "responseDeclaration"),
-                None,
-            )
-            cardinality = declaration.attrib.get("cardinality", "single") if declaration is not None else "single"
-            if cardinality == "multiple":
-                if len(correct_values) < 2:
-                    problems.append(f"{qid}: Multiple Response requires at least two correct answers")
-                elif any(value not in choice_ids for value in correct_values):
-                    problems.append(f"{qid}: a correct answer does not match a choice")
-                else:
-                    supported += 1
-            elif len(correct_values) != 1:
-                problems.append(f"{qid}: requires exactly one correct answer")
-            elif correct_values[0] not in choice_ids:
-                problems.append(f"{qid}: correct answer does not match a choice")
-            else:
-                supported += 1
+            supported += 1
 
     if supported == 0:
         detail = "; ".join(problems[:5])
-        raise ValueError("No supported questions were found." + (f" {detail}" if detail else ""))
+        raise ValueError("No supported single-answer questions were found." + (f" {detail}" if detail else ""))
 
     return quiz_id, title, supported, problems
 
@@ -320,6 +283,167 @@ def safe_quiz_filename(quiz_id: str) -> str:
     if not safe_id:
         safe_id = uuid.uuid4().hex
     return f"{safe_id}.xml"
+
+
+
+
+def require_admin(request: Request):
+    session = session_user(request)
+    return session if is_admin(session) else None
+
+
+def bank_record(quiz_id: str):
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT id, title, filename FROM quizzes WHERE id=?",
+        (quiz_id,),
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def bank_records():
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, title, filename FROM quizzes ORDER BY title COLLATE NOCASE"
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def bank_path_from_record(row):
+    if row is None:
+        return None
+    path = (QTI_DIR / row["filename"]).resolve()
+    try:
+        path.relative_to(QTI_DIR.resolve())
+    except ValueError:
+        return None
+    return path
+
+
+def bank_question_summary(quiz_id: str):
+    row = bank_record(quiz_id)
+    path = bank_path_from_record(row)
+    if row is None or path is None or not path.exists():
+        return row, []
+    bank = load_qti_bank(path)
+    return row, bank.questions
+
+
+def validate_identifier(value: str, *, field_name: str = "Identifier") -> str:
+    value = value.strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", value):
+        raise ValueError(
+            f"{field_name} must begin with a letter or number and use only "
+            "letters, numbers, dots, dashes, or underscores."
+        )
+    return value
+
+
+def create_empty_qti_bank(quiz_id: str, title: str, description: str = "") -> ET.ElementTree:
+    root = ET.Element("assessmentTest", {"identifier": quiz_id, "title": title})
+    metadata = ET.SubElement(root, "qtiMetadata")
+    if description.strip():
+        field = ET.SubElement(metadata, "qtiMetadataField")
+        ET.SubElement(field, "fieldLabel").text = "description"
+        ET.SubElement(field, "fieldEntry").text = description.strip()
+    test_part = ET.SubElement(root, "testPart", {"identifier": f"{quiz_id}-part"})
+    ET.SubElement(
+        test_part,
+        "assessmentSection",
+        {"identifier": f"{quiz_id}-section", "title": title},
+    )
+    return ET.ElementTree(root)
+
+
+def qti_section(root):
+    section = next((e for e in root.iter() if local_name(e.tag) == "assessmentSection"), None)
+    if section is not None:
+        return section
+    test_part = next((e for e in root.iter() if local_name(e.tag) == "testPart"), None)
+    if test_part is None:
+        test_part = ET.SubElement(root, "testPart", {"identifier": "part-1"})
+    return ET.SubElement(test_part, "assessmentSection", {"identifier": "section-1"})
+
+
+def metadata_field(parent, label: str, value: str):
+    if not value.strip():
+        return
+    metadata = ET.SubElement(parent, "qtiMetadata")
+    field = ET.SubElement(metadata, "qtiMetadataField")
+    ET.SubElement(field, "fieldLabel").text = label
+    ET.SubElement(field, "fieldEntry").text = value.strip()
+
+
+def append_qti_question(
+    tree: ET.ElementTree,
+    *,
+    qid: str,
+    prompt: str,
+    choices: list[str],
+    correct_index: int,
+    domain: str = "",
+    objective: str = "",
+):
+    root = tree.getroot()
+    existing_ids = {
+        e.attrib.get("identifier")
+        for e in root.iter()
+        if local_name(e.tag) == "assessmentItem"
+    }
+    if qid in existing_ids:
+        raise ValueError(f"Question identifier '{qid}' already exists in this bank.")
+
+    item = ET.SubElement(
+        qti_section(root),
+        "assessmentItem",
+        {"identifier": qid, "title": qid, "adaptive": "false", "timeDependent": "false"},
+    )
+    response = ET.SubElement(
+        item,
+        "responseDeclaration",
+        {"identifier": "RESPONSE", "cardinality": "single", "baseType": "identifier"},
+    )
+    correct_response = ET.SubElement(response, "correctResponse")
+    correct_id = f"C{correct_index + 1}"
+    ET.SubElement(correct_response, "value").text = correct_id
+
+    if domain.strip():
+        metadata_field(item, "domain", domain)
+    if objective.strip():
+        metadata_field(item, "objective", objective)
+    metadata_field(item, "question_type", "single-choice")
+
+    body = ET.SubElement(item, "itemBody")
+    interaction = ET.SubElement(
+        body,
+        "choiceInteraction",
+        {"responseIdentifier": "RESPONSE", "maxChoices": "1", "shuffle": "false"},
+    )
+    ET.SubElement(interaction, "prompt").text = prompt.strip()
+    for index, choice in enumerate(choices, start=1):
+        ET.SubElement(interaction, "simpleChoice", {"identifier": f"C{index}"}).text = choice.strip()
+
+
+def write_qti_tree(tree: ET.ElementTree, destination: Path):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    ET.indent(tree, space="  ")
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    tree.write(temporary, encoding="utf-8", xml_declaration=True)
+    temporary.replace(destination)
+
+
+def delete_qti_question(path: Path, qid: str) -> bool:
+    tree = ET.parse(path)
+    root = tree.getroot()
+    for parent in root.iter():
+        for child in list(parent):
+            if local_name(child.tag) == "assessmentItem" and child.attrib.get("identifier") == qid:
+                parent.remove(child)
+                write_qti_tree(tree, path)
+                return True
+    return False
 
 
 @app.get("/qb-manage", response_class=HTMLResponse)
@@ -352,16 +476,14 @@ def qb_list_page(request: Request, message: str = "", error: str = ""):
             status_code=403,
         )
     conn = get_conn()
-    try:
-        quizzes = conn.execute(
-            """
-            SELECT id, title, filename
-            FROM quizzes
-            ORDER BY title COLLATE NOCASE
-            """
-        ).fetchall()
-    finally:
-        conn.close()
+    quizzes = conn.execute(
+        """
+        SELECT id, title, filename
+        FROM quizzes
+        ORDER BY title COLLATE NOCASE
+        """
+    ).fetchall()
+    conn.close()
     return templates.TemplateResponse(
         request,
         "qb_list.html",
@@ -424,30 +546,238 @@ def render_qb_placeholder(
 
 
 @app.get("/qb-manage/export", response_class=HTMLResponse)
-def qb_export_page(request: Request):
-    return render_qb_placeholder(
+def qb_export_page(request: Request, error: str = ""):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    return templates.TemplateResponse(
         request,
-        title="Export Question Bank",
-        description=(
-            "Export will allow an installed question bank to be selected "
-            "and downloaded in a portable format."
-        ),
-        symbol="⇩",
+        "qb_export.html",
+        {
+            "request": request,
+            "quizzes": bank_records(),
+            "error": error,
+            "is_admin": True,
+            "version": __version__,
+        },
+    )
+
+
+@app.get("/qb-manage/export/{quiz_id}")
+def qb_export_download(request: Request, quiz_id: str):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id)
+    path = bank_path_from_record(row)
+    if row is None or path is None or not path.exists():
+        return RedirectResponse(
+            url="/qb-manage/export?error=" + quote_plus("The selected bank file could not be found."),
+            status_code=303,
+        )
+    return FileResponse(
+        path,
+        media_type="application/xml",
+        filename=safe_quiz_filename(row["id"]),
     )
 
 
 @app.get("/qb-manage/create", response_class=HTMLResponse)
-def qb_create_page(request: Request):
-    if not is_admin(session_user(request)):
+def qb_create_page(request: Request, error: str = ""):
+    if not require_admin(request):
         return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
-    return RedirectResponse(url="/qb-manage/create/step/1", status_code=303)
+    return templates.TemplateResponse(
+        request,
+        "qb_create.html",
+        {
+            "request": request,
+            "error": error,
+            "is_admin": True,
+            "version": __version__,
+        },
+    )
 
 
-@app.get("/qb-manage/edit")
-def qb_edit_page(request: Request):
-    if not is_admin(session_user(request)):
+@app.post("/qb-manage/create")
+def qb_create_bank(
+    request: Request,
+    identifier: str = Form(...),
+    title: str = Form(...),
+    description: str = Form(""),
+):
+    if not require_admin(request):
         return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
-    return RedirectResponse(url="/qb-manage/banks", status_code=303)
+    try:
+        quiz_id = validate_identifier(identifier, field_name="Bank identifier")
+        title = title.strip()
+        if not title:
+            raise ValueError("Bank title is required.")
+        filename = safe_quiz_filename(quiz_id)
+        destination = QTI_DIR / filename
+        conn = get_conn()
+        existing = conn.execute("SELECT id FROM quizzes WHERE id=?", (quiz_id,)).fetchone()
+        if existing:
+            conn.close()
+            raise ValueError(f"A question bank with identifier '{quiz_id}' already exists.")
+        tree = create_empty_qti_bank(quiz_id, title, description)
+        write_qti_tree(tree, destination)
+        conn.execute(
+            "INSERT INTO quizzes (id, title, filename) VALUES (?, ?, ?)",
+            (quiz_id, title, filename),
+        )
+        conn.commit()
+        conn.close()
+    except ValueError as exc:
+        return RedirectResponse(
+            url="/qb-manage/create?error=" + quote_plus(str(exc)),
+            status_code=303,
+        )
+    return RedirectResponse(
+        url=f"/qb-manage/edit/{quiz_id}?message=" + quote_plus("Question bank created. Add the first question when ready."),
+        status_code=303,
+    )
+
+
+@app.get("/qb-manage/edit", response_class=HTMLResponse)
+def qb_edit_page(request: Request, error: str = ""):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    return templates.TemplateResponse(
+        request,
+        "qb_edit_select.html",
+        {
+            "request": request,
+            "quizzes": bank_records(),
+            "error": error,
+            "is_admin": True,
+            "version": __version__,
+        },
+    )
+
+
+@app.get("/qb-manage/edit/{quiz_id}", response_class=HTMLResponse)
+def qb_edit_bank(request: Request, quiz_id: str, message: str = "", error: str = ""):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row, questions = bank_question_summary(quiz_id)
+    if row is None:
+        return RedirectResponse(
+            url="/qb-manage/edit?error=" + quote_plus("Question bank not found."),
+            status_code=303,
+        )
+    return templates.TemplateResponse(
+        request,
+        "qb_editor.html",
+        {
+            "request": request,
+            "bank": row,
+            "questions": questions,
+            "message": message,
+            "error": error,
+            "is_admin": True,
+            "version": __version__,
+        },
+    )
+
+
+@app.get("/qb-manage/edit/{quiz_id}/questions/new", response_class=HTMLResponse)
+def qb_new_question_page(request: Request, quiz_id: str, error: str = ""):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id)
+    if row is None:
+        return RedirectResponse(url="/qb-manage/edit", status_code=303)
+    return templates.TemplateResponse(
+        request,
+        "qb_question_new.html",
+        {
+            "request": request,
+            "bank": row,
+            "error": error,
+            "is_admin": True,
+            "version": __version__,
+        },
+    )
+
+
+@app.post("/qb-manage/edit/{quiz_id}/questions/new")
+def qb_add_question(
+    request: Request,
+    quiz_id: str,
+    question_id: str = Form(...),
+    prompt: str = Form(...),
+    choice_a: str = Form(...),
+    choice_b: str = Form(...),
+    choice_c: str = Form(""),
+    choice_d: str = Form(""),
+    correct_choice: int = Form(...),
+    domain: str = Form(""),
+    objective: str = Form(""),
+):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id)
+    path = bank_path_from_record(row)
+    try:
+        if row is None or path is None or not path.exists():
+            raise ValueError("Question bank file could not be found.")
+        qid = validate_identifier(question_id, field_name="Question identifier")
+        prompt = prompt.strip()
+        if not prompt:
+            raise ValueError("Question text is required.")
+        choices = [choice_a.strip(), choice_b.strip()]
+        choices.extend(c.strip() for c in (choice_c, choice_d) if c.strip())
+        if any(not c for c in choices[:2]):
+            raise ValueError("At least choices A and B are required.")
+        if correct_choice < 1 or correct_choice > len(choices):
+            raise ValueError("The correct answer must identify one of the supplied choices.")
+        tree = ET.parse(path)
+        append_qti_question(
+            tree,
+            qid=qid,
+            prompt=prompt,
+            choices=choices,
+            correct_index=correct_choice - 1,
+            domain=domain,
+            objective=objective,
+        )
+        write_qti_tree(tree, path)
+    except (ValueError, ET.ParseError) as exc:
+        return RedirectResponse(
+            url=f"/qb-manage/edit/{quiz_id}/questions/new?error=" + quote_plus(str(exc)),
+            status_code=303,
+        )
+    return RedirectResponse(
+        url=f"/qb-manage/edit/{quiz_id}?message=" + quote_plus(f"Question '{qid}' added."),
+        status_code=303,
+    )
+
+
+@app.post("/qb-manage/edit/{quiz_id}/questions/{question_id}/delete")
+def qb_delete_question(request: Request, quiz_id: str, question_id: str):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id)
+    path = bank_path_from_record(row)
+    if row is None or path is None or not path.exists():
+        return RedirectResponse(
+            url=f"/qb-manage/edit/{quiz_id}?error=" + quote_plus("Question bank file could not be found."),
+            status_code=303,
+        )
+    try:
+        removed = delete_qti_question(path, question_id)
+    except ET.ParseError as exc:
+        return RedirectResponse(
+            url=f"/qb-manage/edit/{quiz_id}?error=" + quote_plus(f"The bank XML could not be read: {exc}"),
+            status_code=303,
+        )
+    if not removed:
+        return RedirectResponse(
+            url=f"/qb-manage/edit/{quiz_id}?error=" + quote_plus("Question not found."),
+            status_code=303,
+        )
+    return RedirectResponse(
+        url=f"/qb-manage/edit/{quiz_id}?message=" + quote_plus(f"Question '{question_id}' deleted."),
+        status_code=303,
+    )
 
 
 @app.post("/qb-manage/import")
@@ -510,19 +840,6 @@ async def import_quiz(
     QTI_DIR.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(".xml.tmp")
     temporary.write_bytes(data)
-    try:
-        parsed_bank = load_qti_bank(temporary)
-        if not parsed_bank.questions:
-            raise ValueError("No supported questions were found after parsing.")
-        store_question_bank_to_db(parsed_bank, filename=filename)
-    except Exception as exc:
-        temporary.unlink(missing_ok=True)
-        conn.close()
-        from urllib.parse import quote_plus
-        return RedirectResponse(
-            url=f"/qb-manage/import?error={quote_plus('Import failed: ' + str(exc))}",
-            status_code=303,
-        )
     temporary.replace(destination)
 
     if existing and existing[0] != filename:
@@ -548,7 +865,7 @@ async def import_quiz(
     message = quote_plus(
         f"Imported '{title}' with {question_count} supported questions{warning_text}."
     )
-    return RedirectResponse(url=f"/qb-manage?message={message}", status_code=303)
+    return RedirectResponse(url=f"/qb-manage/list?message={message}", status_code=303)
 
 
 @app.get("/history", response_class=HTMLResponse)
@@ -895,32 +1212,4 @@ def results_ui(request: Request):
             "version": __version__,
             "is_admin": is_admin(session),
         },
-    )
-
-# ============================================================================
-# Entry Point - SSL Certificate Management & Server Startup
-# ============================================================================
-
-if __name__ == "__main__":
-    import uvicorn
-    from app.cert import ensure_ssl_certs
-    
-    # Ensure SSL certificates exist (creates on first run, reuses after)
-    cert_file, key_file = ensure_ssl_certs()
-    
-    print("\n" + "="*70)
-    print(f"{PRODUCT_NAME} {__version__} - HTTPS Ready")
-    print("="*70)
-    print(f"🔐 Server: https://0.0.0.0:8000")
-    print(f"📁 Certificates: {cert_file}")
-    print("="*70 + "\n")
-    
-    # Run with HTTPS
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        ssl_keyfile=key_file,
-        ssl_certfile=cert_file,
-        log_level="info"
     )

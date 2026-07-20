@@ -1,32 +1,5 @@
 # Scholarius
 
-Scholarius is a lightweight web-based quiz and study system written in Python and packaged as a Docker application.
-
-The goal of Scholarius is to provide an easy-to-deploy quiz platform suitable for classrooms, self-study, certification preparation, and technical training.
-
----
-
-# Building
-
-Build the image:
-
-```bash
-docker build -t scholarius .
-```
-
-Verify:
-
-```bash
-docker image ls
-```
-
-Launch:
-
-```bash
-docker compose up -d
-```
-
----
 
 ## Accessibility and project status
 
@@ -54,46 +27,37 @@ audit, assistive-technology test program, or production security review.
 Please be patient as the application and its user experience continue to
 develop.
 
----
+## Question-bank authoring status
 
-# License
+As of version 0.0.9, administrators can create a bank, add and delete
+single-answer multiple-choice questions, and export the current bank as
+QTI/XML. The XML file is the authoritative question-bank representation for
+this stage of development. More advanced editing, additional question types,
+and recovery/version-history features remain future work.
 
-Private project.
+## Repository organization
 
----
+Scholarius uses a deliberately small and predictable repository layout:
 
-# Author
+```text
+README.md
+changelog.md
+docs/
+app/
+Dockerfile
+compose.yaml
+requirements.txt
+```
 
-Thomas Hamilton
+- `README.md` introduces the project and its current status.
+- `changelog.md` contains the complete release history in one file.
+- `docs/` contains design notes and supporting project documentation.
+- `app/` contains the Scholarius application.
 
----
+Version-specific `UPDATE-x.x.x.md` files are no longer used. New release
+information is added to `changelog.md`.
 
-# Question Bank and Assessment Goals
-
-Scholarius treats XML as the authoritative, portable representation of a
-question bank. SQLite may be used as a working index for searching and editing,
-but changes made through the editor must ultimately be written safely back to
-the bank XML before they become authoritative.
-
-A **question bank** is the master collection of reusable questions. One bank
-may also define several named **test versions**, such as Practice Test A,
-Practice Test B, and Practice Test C. Each test version references questions
-from the master bank instead of maintaining duplicate copies of the questions.
-
-Scholarius is intended to support these question types:
-
-1. **True/False** — choose one of two Boolean responses.
-2. **Single Choice** — select exactly one answer from a set of choices.
-3. **Multiple Response** — select two or more correct answers from a set of
-   choices. The required number of selections may be fixed or declared by the
-   question.
-4. **Matching** — associate each item on the left with an item on the right.
-5. **Ordering** — arrange a set of items into the correct sequence.
-
-True/False, Single Choice, and Multiple Response are the initial implementation
-priority. Matching and Ordering remain project goals, but their XML model,
-editing interface, scoring behavior, keyboard operation, and accessible
-non-drag alternatives should be designed before implementation.
-
-See [`docs/QUESTION_BANK_MODEL.md`](docs/QUESTION_BANK_MODEL.md) for the
-current terminology and design decisions.
+The distributed project does not currently include a `tests/` directory.
+Development validation may still be performed while preparing a release, but
+those temporary checks are not part of the end-user package. A formal test
+suite can be restored later if the project requires one.
