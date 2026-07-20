@@ -15,6 +15,7 @@ services:
     # Environment variables
     environment:
       - PYTHONUNBUFFERED=1
+      - SCHOLARIUS_SSL_HOST=${SCHOLARIUS_SSL_HOST:-192.168.150.83}
     
     # Restart policy
     restart: unless-stopped

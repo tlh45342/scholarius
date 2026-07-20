@@ -2,10 +2,13 @@
 
 ## 0.0.9
 
-### Fixed
-- Corrected the Docker startup command to run Uvicorn as the foreground process.
-- Removed the obsolete dependency on `start.sh`.
-- Prevented the container restart loop caused by running `python -m app.main`.
+### SSL startup restoration
+
+- Restored self-signed HTTPS startup without reintroducing `start.sh`.
+- Added `app/serve.py` as the container's long-running Uvicorn launcher.
+- Reuses `app/cert.pem` and `app/key.pem` when present.
+- Generates a replacement certificate with OpenSSL when either file is absent.
+- Added the `SCHOLARIUS_SSL_HOST` environment setting for the certificate IP.
 
 
 ## Question-bank authoring

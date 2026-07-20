@@ -1,16 +1,12 @@
-Scholarius 0.0.9 Docker startup fix
+Scholarius 0.0.9 SSL restoration patch
 
-Replace:
-  Dockerfile
-  changelog.md
+Replace/add the included files, then set SCHOLARIUS_SSL_HOST to the server IP.
 
-Then run:
-  docker compose down
-  docker compose build --no-cache
-  docker compose up -d
-  docker compose logs -f scholarius
+Rebuild:
+    docker compose down
+    docker compose build --no-cache
+    docker compose up -d
+    docker compose logs -f scholarius
 
-Expected startup output includes:
-  Uvicorn running on http://0.0.0.0:8000
-
-The version remains 0.0.9.
+Open:
+    https://<server-ip>:8000
