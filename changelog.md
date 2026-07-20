@@ -2,6 +2,12 @@
 
 ## 0.0.9
 
+### Fixed
+- Corrected the Docker startup command to run Uvicorn as the foreground process.
+- Removed the obsolete dependency on `start.sh`.
+- Prevented the container restart loop caused by running `python -m app.main`.
+
+
 ## Question-bank authoring
 
 Scholarius now supports a complete first authoring loop:
