@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-theme="{{ theme|default('system') }}">
+
+<main class="container card-with-corner">
+    <h1>{{ title }}</h1>
+
+    <div class="placeholder-panel">
+        <div class="placeholder-symbol" aria-hidden="true">{{ symbol }}</div>
+        <p>{{ description }}</p>
+        <p class="placeholder-note">
+            This workspace is reserved for a future Scholarius release.
+        </p>
+    </div>
+
+    <a class="card-corner-icon" href="/qb-manage"
+       aria-label="Back to question bank management"
+       title="Back to question bank management">‹</a>
+</main>
+
+{% include "_corner_nav.html" %}
+</body>
+</html>

@@ -1,0 +1,55 @@
+<assessmentTest identifier="sample-test-1" title="Sample Quiz 1">
+    <assessmentItem identifier="q1" title="Question 1">
+        <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="identifier">
+            <correctResponse>
+                <value>A</value>
+            </correctResponse>
+        </responseDeclaration>
+
+        <itemBody>
+            <choiceInteraction responseIdentifier="RESPONSE" maxChoices="1">
+                <prompt>What does HTTP stand for?</prompt>
+
+                <simpleChoice identifier="A">Hypertext Transfer Protocol</simpleChoice>
+                <simpleChoice identifier="B">High Transfer Text Process</simpleChoice>
+                <simpleChoice identifier="C">Host Tunnel Transfer Protocol</simpleChoice>
+            </choiceInteraction>
+        </itemBody>
+    </assessmentItem>
+
+    <assessmentItem identifier="q2" title="Question 2">
+        <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="identifier">
+            <correctResponse>
+                <value>B</value>
+            </correctResponse>
+        </responseDeclaration>
+
+        <itemBody>
+            <choiceInteraction responseIdentifier="RESPONSE" maxChoices="1">
+                <prompt>Which port is commonly used for HTTPS?</prompt>
+
+                <simpleChoice identifier="A">80</simpleChoice>
+                <simpleChoice identifier="B">443</simpleChoice>
+                <simpleChoice identifier="C">25</simpleChoice>
+            </choiceInteraction>
+        </itemBody>
+    </assessmentItem>
+
+    <assessmentItem identifier="q3" title="Question 3">
+        <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="identifier">
+            <correctResponse>
+                <value>C</value>
+            </correctResponse>
+        </responseDeclaration>
+
+        <itemBody>
+            <choiceInteraction responseIdentifier="RESPONSE" maxChoices="1">
+                <prompt>Which protocol is commonly used to resolve hostnames to IP addresses?</prompt>
+
+                <simpleChoice identifier="A">SMTP</simpleChoice>
+                <simpleChoice identifier="B">FTP</simpleChoice>
+                <simpleChoice identifier="C">DNS</simpleChoice>
+            </choiceInteraction>
+        </itemBody>
+    </assessmentItem>
+</assessmentTest>

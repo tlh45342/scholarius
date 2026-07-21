@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Question Bank - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-theme="{{ theme|default('system') }}">
+
+<main class="container container-wide card-with-corner">
+    <h1>Import Question Bank</h1>
+    <p>
+        Add a QTI XML question bank to Scholarius.
+        The identifier and title are read from the file.
+    </p>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <section class="panel">
+        <h2>QTI XML File</h2>
+        <p class="left-text">
+            Scholarius currently supports single-answer multiple-choice
+            and true/false questions. The file is validated before it is installed.
+        </p>
+
+        <form action="/qb-manage/import" method="post"
+              enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="quiz_file">Choose question bank</label>
+                <input id="quiz_file" name="quiz_file" type="file"
+                       accept=".xml,text/xml,application/xml" required>
+            </div>
+
+            <label class="checkbox-row">
+                <input type="checkbox" name="overwrite" value="true">
+                Replace an existing question bank with the same identifier
+            </label>
+
+            <button class="button button-primary button-space" type="submit">
+                Import Question Bank
+            </button>
+        </form>
+    </section>
+
+    <a class="card-corner-icon" href="/qb-manage"
+       aria-label="Back to question bank management"
+       title="Back to question bank management">‹</a>
+</main>
+
+{% include "_corner_nav.html" %}
+</body>
+</html>

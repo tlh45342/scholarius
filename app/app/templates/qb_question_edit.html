@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Question - Scholarius</title><link rel="stylesheet" href="/static/style.css"></head>
+<body data-theme="{{ theme|default('system') }}"><main class="container container-wide card-with-corner">
+<h1>Edit Question</h1><p>Edit <code>{{ question.qid }}</code> directly in <strong>{{ bank[1] }}</strong>.</p>
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+<form action="/qb-manage/edit/{{ bank[0] }}/questions/{{ question.qid }}" method="post">
+<div class="form-group"><label for="prompt">Question text</label><textarea id="prompt" name="prompt" rows="5" required>{{ question.prompt }}</textarea></div>
+<fieldset class="choice-fieldset"><legend>Answer choices</legend>
+{% set values = question.choices.values()|list %}{% set ids = question.choices.keys()|list %}
+{% for label in ['A','B','C','D'] %}<div class="form-group"><label for="choice_{{ label|lower }}">Choice {{ label }}</label><input id="choice_{{ label|lower }}" name="choice_{{ label|lower }}" value="{{ values[loop.index0] if loop.index0 < values|length else '' }}" {% if loop.index0 < 2 %}required{% endif %}></div>{% endfor %}
+</fieldset>
+<div class="form-group"><label for="correct_choice">Correct choice</label><select id="correct_choice" name="correct_choice" required>{% for label in ['A','B','C','D'] %}{% if loop.index0 < values|length %}<option value="{{ loop.index }}" {% if ids[loop.index0] == question.correct %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}</select></div>
+<div class="form-group"><label for="domain">Domain</label><input id="domain" name="domain" value="{{ question.domain or '' }}"></div>
+<div class="form-group"><label for="objective">Objective</label><input id="objective" name="objective" value="{{ question.objective or '' }}"></div>
+<div class="form-group"><label for="status">Status</label><select id="status" name="status"><option value="active" {% if question.status != 'retired' %}selected{% endif %}>Active</option><option value="retired" {% if question.status == 'retired' %}selected{% endif %}>Retired (black label)</option></select></div>
+<button class="button button-primary button-space" type="submit">Save Question</button></form>
+<a class="card-corner-icon" href="/qb-manage/edit/{{ bank[0] }}" aria-label="Back to bank editor" title="Back">‹</a>
+</main>{% include "_corner_nav.html" %}</body></html>

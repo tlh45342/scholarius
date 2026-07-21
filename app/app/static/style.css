@@ -1,0 +1,1077 @@
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to bottom, #eef2f7, #dfe6ee);
+    margin: 0;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 420px;
+    margin: 120px auto;
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 14px;
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.10),
+        0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #1f2937;
+    font-size: 42px;
+}
+
+p {
+    text-align: center;
+    color: #555;
+    margin-bottom: 30px;
+}
+
+.menu {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.button {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border-radius: 6px;
+    text-align: center;
+    text-decoration: none;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.button-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.button-primary:hover {
+    background-color: #0056b3;
+}
+
+.button-disabled {
+    background-color: #e0e0e0;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.form-group {
+    margin-top: 22px;
+}
+
+.button-space {
+    margin-top: 30px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #444;
+}
+
+input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.back {
+    margin-top: 20px;
+    display: block;
+    text-align: center;
+}
+
+.note {
+    font-size: 12px;
+    color: #999;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.choice-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0;
+}
+
+.choice-row input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+.container-wide {
+    max-width: 760px;
+    margin-top: 60px;
+}
+
+.panel {
+    margin-top: 24px;
+    padding: 22px;
+    border: 1px solid #d9e0e8;
+    border-radius: 10px;
+    background: #f9fbfd;
+}
+
+.panel h2 {
+    margin-top: 0;
+    color: #1f2937;
+}
+
+.left-text {
+    text-align: left;
+    margin-bottom: 18px;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    font-weight: normal;
+}
+
+.checkbox-row input[type="checkbox"] {
+    width: auto;
+}
+
+.alert {
+    margin: 18px 0;
+    padding: 12px 14px;
+    border-radius: 7px;
+}
+
+.alert-success {
+    background: #e8f7ed;
+    border: 1px solid #abd8b8;
+    color: #195c2c;
+}
+
+.alert-error {
+    background: #fff0f0;
+    border: 1px solid #e7b0b0;
+    color: #8a2020;
+}
+
+.quiz-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.quiz-table th,
+.quiz-table td {
+    padding: 10px;
+    border: 1px solid #d9e0e8;
+    text-align: left;
+    vertical-align: top;
+}
+
+.quiz-table th {
+    background: #edf2f7;
+}
+
+/* -------------------------------------------------------------------------
+   Scholarius simplified home page
+   ------------------------------------------------------------------------- */
+
+.home-page {
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(
+            circle at top,
+            rgba(255, 255, 255, 0.96),
+            transparent 42%
+        ),
+        linear-gradient(
+            145deg,
+            #edf3f9 0%,
+            #dce6f0 100%
+        );
+}
+
+.home-shell {
+    width: 100%;
+    padding: 40px 24px;
+    box-sizing: border-box;
+}
+
+.home-card {
+    width: min(440px, calc(100vw - 48px));
+    margin: 0 auto;
+    padding: 48px 40px 34px;
+    box-sizing: border-box;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(15, 45, 75, 0.10);
+    border-radius: 22px;
+    box-shadow:
+        0 22px 50px rgba(20, 45, 70, 0.14),
+        0 4px 12px rgba(20, 45, 70, 0.08);
+}
+
+.home-card h1 {
+    margin: 0;
+    color: #0b2948;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 46px;
+    line-height: 1.05;
+    letter-spacing: -0.5px;
+}
+
+.home-subtitle {
+    margin: 14px 0 32px;
+    color: #5b6773;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.home-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.home-button {
+    display: block;
+    width: 100%;
+    padding: 14px 18px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    text-decoration: none;
+    text-transform: uppercase;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.45px;
+    transition:
+        transform 120ms ease,
+        box-shadow 120ms ease,
+        background-color 120ms ease,
+        border-color 120ms ease;
+}
+
+.home-button:hover {
+    transform: translateY(-1px);
+}
+
+.home-button:focus-visible,
+.settings-button:focus-visible {
+    outline: 3px solid rgba(25, 118, 210, 0.35);
+    outline-offset: 3px;
+}
+
+.home-button-primary {
+    padding-top: 17px;
+    padding-bottom: 17px;
+    color: #ffffff;
+    background: #0b73e0;
+    border: 1px solid #0b73e0;
+    box-shadow: 0 8px 18px rgba(11, 115, 224, 0.22);
+}
+
+.home-button-primary:hover {
+    background: #075fb9;
+    border-color: #075fb9;
+    box-shadow: 0 10px 22px rgba(11, 115, 224, 0.28);
+}
+
+.home-button-secondary {
+    color: #173a5e;
+    background: #f5f8fb;
+    border: 1px solid #d6e0e9;
+}
+
+.home-button-secondary:hover {
+    background: #eaf1f7;
+    border-color: #bdccd9;
+}
+
+.home-user {
+    margin: 24px 0 0;
+    color: #8a949e;
+    font-size: 12px;
+}
+
+.settings-button {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    color: #ffffff;
+    background: #0b2948;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(7, 30, 52, 0.24);
+    text-decoration: none;
+    font-size: 25px;
+    line-height: 1;
+    transition:
+        transform 120ms ease,
+        background-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.settings-button:hover {
+    transform: translateY(-2px) rotate(10deg);
+    background: #123e69;
+    box-shadow: 0 10px 24px rgba(7, 30, 52, 0.30);
+}
+
+@media (max-width: 560px) {
+    .home-shell {
+        padding: 28px 18px 90px;
+    }
+
+    .home-card {
+        width: 100%;
+        padding: 38px 24px 28px;
+    }
+
+    .home-card h1 {
+        font-size: 39px;
+    }
+
+    .settings-button {
+        left: 18px;
+        bottom: 18px;
+    }
+}
+
+select { width:100%; box-sizing:border-box; padding:12px; border:1px solid #ccc; border-radius:6px; background:#fff; font-size:14px; }
+
+/* Scholarius 0.0.3 history */
+.review-row { padding: 12px; border-radius: 8px; background: #eef4fa; }
+.history-container { max-width: 900px; }
+.history-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:24px 0; }
+.stat-card { padding:18px 12px; border:1px solid #d9e0e8; border-radius:10px; background:#f9fbfd; text-align:center; }
+.stat-card strong { display:block; font-size:28px; color:#0b2948; }
+.stat-card span { display:block; margin-top:5px; color:#687482; font-size:13px; text-transform:uppercase; letter-spacing:.4px; }
+@media (max-width:700px) { .history-summary { grid-template-columns:repeat(2,1fr); } .quiz-table { font-size:13px; } }
+
+/* Scholarius 0.0.4 authentication and profiles */
+.auth-container { margin-top: 70px; }
+.version-note { margin: 24px 0 0; color: #8a949e; font-size: 12px; }
+.form-group small { display:block; margin-top:7px; color:#6b7280; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+@media (max-width:700px) { .form-grid { grid-template-columns:1fr; } }
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.5 first-run, card navigation, and bank-management flow
+   ------------------------------------------------------------------------- */
+
+.auth-page {
+    min-height: 100vh;
+    margin: 0;
+    background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.96), transparent 42%),
+        linear-gradient(145deg, #edf3f9 0%, #dce6f0 100%);
+}
+
+.account-create-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e1e7ed;
+}
+
+.button-secondary,
+.account-create-button {
+    color: #173a5e;
+    background: #f5f8fb;
+    border: 1px solid #cbd7e2;
+}
+
+.button-secondary:hover,
+.account-create-button:hover {
+    background: #eaf1f7;
+    border-color: #afc0cf;
+}
+
+.account-create-help {
+    margin: 12px 6px 0;
+    color: #6d7884;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.welcome-container {
+    max-width: 520px;
+    margin-top: 70px;
+    text-align: center;
+}
+
+.welcome-mark {
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    color: #ffffff;
+    background: #0b2948;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 34px;
+    box-shadow: 0 8px 18px rgba(7, 30, 52, 0.20);
+}
+
+.welcome-copy {
+    margin: 16px 0;
+    color: #536171;
+    font-size: 15px;
+    line-height: 1.65;
+}
+
+.card-with-corner {
+    position: relative;
+    padding-bottom: 78px;
+}
+
+.card-corner-icon {
+    position: absolute;
+    left: 24px;
+    bottom: 22px;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    color: #173a5e;
+    background: #f5f8fb;
+    border: 1px solid #cbd7e2;
+    border-radius: 50%;
+    text-decoration: none;
+    font-size: 22px;
+    line-height: 1;
+    box-shadow: 0 4px 10px rgba(20, 45, 70, 0.10);
+    transition:
+        transform 120ms ease,
+        background-color 120ms ease,
+        border-color 120ms ease;
+}
+
+.card-corner-icon:hover {
+    transform: translateY(-1px);
+    background: #eaf1f7;
+    border-color: #afc0cf;
+}
+
+.card-corner-icon:focus-visible {
+    outline: 3px solid rgba(25, 118, 210, 0.34);
+    outline-offset: 3px;
+}
+
+.panel-heading-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 22px;
+    margin-bottom: 18px;
+}
+
+.panel-heading-row h2 {
+    margin-bottom: 7px;
+}
+
+.compact-copy {
+    margin: 0;
+}
+
+.compact-action {
+    width: auto;
+    min-width: 190px;
+    flex: 0 0 auto;
+}
+
+.empty-state {
+    padding: 28px 20px;
+    border: 1px dashed #bdcbd8;
+    border-radius: 10px;
+    background: #ffffff;
+    text-align: center;
+}
+
+.empty-state strong,
+.empty-state span {
+    display: block;
+}
+
+.empty-state span {
+    margin-top: 7px;
+    color: #697684;
+}
+
+.utility-strip {
+    position: fixed !important;
+    left: 18px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: 15px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 1000;
+}
+
+.corner-nav {
+    position: static !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.corner-nav-button {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 42px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    color: #ffffff;
+    background: #0b2948;
+    border: 1px solid rgba(255, 255, 255, 0.42);
+    border-radius: 50%;
+    box-shadow: 0 7px 17px rgba(7, 30, 52, 0.22);
+    text-decoration: none;
+    font-size: 23px;
+    line-height: 1;
+    transition:
+        transform 120ms ease,
+        background-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.corner-nav-button:hover {
+    transform: translateY(-2px);
+    background: #123e69;
+    box-shadow: 0 9px 20px rgba(7, 30, 52, 0.28);
+}
+
+.corner-nav-button:focus-visible {
+    outline: 3px solid rgba(25, 118, 210, 0.36);
+    outline-offset: 3px;
+}
+
+.corner-nav-admin {
+    background: #3b4652;
+    font-size: 16px;
+}
+
+.corner-nav-admin:hover {
+    background: #525f6d;
+}
+
+.utility-version,
+.public-version-label {
+    color: rgba(40, 55, 70, 0.42);
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.25px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.public-version-label {
+    position: fixed;
+    left: 18px;
+    bottom: 13px;
+    z-index: 1000;
+}
+
+.home-user,
+.version-note,
+.version-label,
+.settings-button {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+    .panel-heading-row {
+        flex-direction: column;
+    }
+
+    .compact-action {
+        width: 100%;
+    }
+}
+
+@media (max-width: 560px) {
+    .utility-strip {
+        left: 13px !important;
+        bottom: 12px !important;
+        gap: 9px !important;
+    }
+
+    .corner-nav {
+        gap: 6px !important;
+    }
+
+    .corner-nav-button {
+        width: 39px;
+        height: 39px;
+        flex-basis: 39px;
+    }
+
+    .utility-version,
+    .public-version-label {
+        font-size: 9px;
+    }
+
+    .public-version-label {
+        left: 13px;
+        bottom: 10px;
+    }
+
+    .card-corner-icon {
+        left: 18px;
+        bottom: 18px;
+    }
+}
+
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.6 progressive account help
+   ------------------------------------------------------------------------- */
+
+.account-create-section {
+    position: relative;
+}
+
+.account-create-help {
+    display: none;
+}
+
+.account-tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 12px);
+
+    width: min(280px, calc(100vw - 64px));
+    box-sizing: border-box;
+    padding: 10px 12px;
+
+    color: #ffffff;
+    background: #263747;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.20);
+
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: center;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate(-50%, 6px);
+
+    transition:
+        opacity 130ms ease,
+        transform 130ms ease,
+        visibility 130ms ease;
+
+    z-index: 20;
+}
+
+.account-tooltip::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+
+    border: 7px solid transparent;
+    border-top-color: #263747;
+}
+
+.account-create-section:hover .account-tooltip,
+.account-create-section:focus-within .account-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .account-tooltip {
+        transition: none;
+    }
+}
+
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.7 question bank task launcher
+   ------------------------------------------------------------------------- */
+
+.management-launcher {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.management-launcher .button {
+    margin: 0;
+    text-align: center;
+}
+
+.placeholder-panel {
+    margin-top: 24px;
+    padding: 28px 24px;
+    border: 1px solid #d7e0e8;
+    border-radius: 12px;
+    background: #f8fafc;
+    text-align: center;
+}
+
+.placeholder-symbol {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 18px;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    background: #0b2948;
+    border-radius: 50%;
+    font-size: 28px;
+    line-height: 1;
+}
+
+.placeholder-note {
+    margin-top: 16px;
+    color: #778391;
+    font-size: 12px;
+}
+
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.7 final visual tuning
+   ------------------------------------------------------------------------- */
+
+/*
+ * Slightly deepen the existing blue page gradient without changing its
+ * overall character. This is intentionally a restrained adjustment.
+ */
+body,
+.auth-page,
+.home-page {
+    background:
+        radial-gradient(
+            circle at top,
+            rgba(255, 255, 255, 0.91),
+            transparent 42%
+        ),
+        linear-gradient(
+            145deg,
+            #e5edf5 0%,
+            #ccd9e6 100%
+        );
+}
+
+/*
+ * The lower-left version stamp remains secondary interface metadata,
+ * but receives a modest contrast increase for easier reading.
+ */
+.utility-version,
+.public-version-label {
+    color: rgba(32, 48, 64, 0.58);
+    font-weight: 500;
+}
+
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.8 themes and accessibility foundation
+   ------------------------------------------------------------------------- */
+
+:root {
+    color-scheme: light;
+    --page-top: #e5edf5;
+    --page-bottom: #ccd9e6;
+    --page-glow: rgba(255, 255, 255, 0.91);
+    --surface: #ffffff;
+    --surface-soft: #f5f8fb;
+    --surface-muted: #eef3f7;
+    --text: #1f2d3a;
+    --text-muted: #5f6f7f;
+    --border: #c8d4df;
+    --primary: #0b5fa5;
+    --primary-hover: #084e89;
+    --primary-text: #ffffff;
+    --focus: #ffbf47;
+    --shadow: rgba(7, 30, 52, 0.18);
+    --version: rgba(32, 48, 64, 0.66);
+}
+
+body[data-theme="light"] {
+    color-scheme: light;
+}
+
+body[data-theme="dark"] {
+    color-scheme: dark;
+    --page-top: #1c2b38;
+    --page-bottom: #101a23;
+    --page-glow: rgba(82, 111, 137, 0.20);
+    --surface: #22313e;
+    --surface-soft: #2b3c4a;
+    --surface-muted: #17242f;
+    --text: #f2f5f7;
+    --text-muted: #c4ced6;
+    --border: #536675;
+    --primary: #3b8fd3;
+    --primary-hover: #58a3df;
+    --primary-text: #07131d;
+    --focus: #ffd166;
+    --shadow: rgba(0, 0, 0, 0.34);
+    --version: rgba(232, 239, 244, 0.72);
+}
+
+@media (prefers-color-scheme: dark) {
+    body[data-theme="system"] {
+        color-scheme: dark;
+        --page-top: #1c2b38;
+        --page-bottom: #101a23;
+        --page-glow: rgba(82, 111, 137, 0.20);
+        --surface: #22313e;
+        --surface-soft: #2b3c4a;
+        --surface-muted: #17242f;
+        --text: #f2f5f7;
+        --text-muted: #c4ced6;
+        --border: #536675;
+        --primary: #3b8fd3;
+        --primary-hover: #58a3df;
+        --primary-text: #07131d;
+        --focus: #ffd166;
+        --shadow: rgba(0, 0, 0, 0.34);
+        --version: rgba(232, 239, 244, 0.72);
+    }
+}
+
+body,
+.auth-page,
+.home-page {
+    color: var(--text);
+    background:
+        radial-gradient(circle at top, var(--page-glow), transparent 42%),
+        linear-gradient(145deg, var(--page-top) 0%, var(--page-bottom) 100%);
+}
+
+.container,
+.home-card,
+.panel,
+.placeholder-panel,
+.empty-state {
+    color: var(--text);
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: 0 12px 30px var(--shadow);
+}
+
+p,
+small,
+.left-text,
+.compact-copy,
+.placeholder-note,
+.account-create-help {
+    color: var(--text-muted);
+}
+
+input,
+select,
+textarea {
+    color: var(--text);
+    background: var(--surface-soft);
+    border-color: var(--border);
+}
+
+.button-primary,
+.home-button-primary,
+.management-launcher .button {
+    color: var(--primary-text);
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.button-primary:hover,
+.home-button-primary:hover,
+.management-launcher .button:hover {
+    color: var(--primary-text);
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.button-secondary,
+.account-create-button,
+.card-corner-icon {
+    color: var(--text);
+    background: var(--surface-soft);
+    border-color: var(--border);
+}
+
+.utility-version,
+.public-version-label {
+    color: var(--version);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid var(--focus) !important;
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.9 question-bank authoring
+   ------------------------------------------------------------------------- */
+.bank-action-list,
+.question-editor-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.bank-action-row,
+.question-editor-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 18px;
+    background: var(--surface-soft, #f5f8fb);
+    border: 1px solid var(--border, #c8d4df);
+    border-radius: 10px;
+}
+
+.bank-identifier,
+.question-editor-id,
+.question-editor-meta {
+    margin-top: 5px;
+    color: var(--text-muted, #5f6f7f);
+    font-size: 12px;
+}
+
+.question-editor-content {
+    min-width: 0;
+    text-align: left;
+}
+
+.editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.button-danger {
+    color: #ffffff;
+    background: #a92e35;
+    border-color: #a92e35;
+}
+
+.button-danger:hover {
+    color: #ffffff;
+    background: #87242a;
+    border-color: #87242a;
+}
+
+.choice-fieldset {
+    margin: 18px 0;
+    padding: 16px;
+    border: 1px solid var(--border, #c8d4df);
+    border-radius: 10px;
+}
+
+.choice-fieldset legend {
+    padding: 0 8px;
+    font-weight: 700;
+}
+
+@media (max-width: 700px) {
+    .bank-action-row,
+    .question-editor-row,
+    .panel-heading-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .editor-actions {
+        justify-content: stretch;
+    }
+
+    .editor-actions .button,
+    .bank-action-row .button,
+    .question-editor-row form,
+    .question-editor-row button {
+        width: 100%;
+    }
+}
+
+.retired-label {
+    display: inline-block;
+    background: #111;
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+
+/* Dark, declarative card navigation used by authoring screens. */
+.card-corner-icon-primary,
+.card-corner-icon-primary:hover {
+    color: #ffffff;
+    background: #0b2948;
+    border-color: #0b2948;
+}
+
+.card-corner-icon-primary:hover {
+    background: #123f6b;
+    border-color: #123f6b;
+}
+
+.bank-action-row form {
+    margin: 0;
+}

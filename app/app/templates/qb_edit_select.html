@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Question Bank - Scholarius</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-theme="{{ theme|default('system') }}">
+<main class="container container-wide card-with-corner">
+    <h1>Edit Question Bank</h1>
+    <p>Choose a bank to add or remove questions.</p>
+    {% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+    {% if quizzes %}
+    <div class="bank-action-list">
+        {% for bank in quizzes %}
+        <div class="bank-action-row">
+            <div>
+                <strong>{{ bank[1] }}</strong>
+                <div class="bank-identifier">{{ bank[0] }}</div>
+            </div>
+            <div class="editor-actions">
+                <a class="button button-primary compact-action" href="/qb-manage/edit/{{ bank[0] }}">Open</a>
+                <form action="/qb-manage/edit/{{ bank[0] }}/delete" method="post"
+                      onsubmit="return confirm('Delete this entire question bank and its XML file? This cannot be undone.');">
+                    <button class="button button-danger compact-action" type="submit">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <strong>No question banks are installed.</strong>
+        <span>Create or import a bank first.</span>
+    </div>
+    {% endif %}
+
+    <a class="card-corner-icon card-corner-icon-primary" href="/qb-manage" aria-label="Back to question bank management" title="Back">‹</a>
+</main>
+{% include "_corner_nav.html" %}
+</body>
+</html>

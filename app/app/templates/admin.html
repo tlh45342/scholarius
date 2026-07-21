@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administration - Scholarius</title><link rel="stylesheet" href="/static/style.css"></head>
+<body data-theme="{{ theme|default('system') }}"><main class="container container-wide"><h1>Administration</h1>
+{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+<section class="panel"><h2>Create User</h2><form action="/admin/create-user" method="post">
+<div class="form-grid"><div><label for="display_name">Display name</label><input id="display_name" name="display_name"></div><div><label for="username">Username</label><input id="username" name="username" required></div><div><label for="password">Temporary password</label><input id="password" name="password" type="password" minlength="10" required></div><div><label for="role">Role</label><select id="role" name="role"><option value="user">User</option><option value="admin">Administrator</option></select></div></div>
+<button class="button button-primary button-space" type="submit">Create User</button></form></section>
+<section class="panel"><h2>Profiles</h2><table class="quiz-table"><thead><tr><th>Username</th><th>Display name</th><th>Role</th><th>Theme</th></tr></thead><tbody>{% for user in users %}<tr><td>{{ user.username }}</td><td>{{ user.display_name or user.username }}</td><td>{{ user.role }}</td><td>{{ user.theme }}</td></tr>{% endfor %}</tbody></table></section>
+<a class="back" href="/">Home</a></main>{% include "_corner_nav.html" %}
+</body></html>
