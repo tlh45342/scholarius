@@ -61,3 +61,9 @@ The distributed project does not currently include a `tests/` directory.
 Development validation may still be performed while preparing a release, but
 those temporary checks are not part of the end-user package. A formal test
 suite can be restored later if the project requires one.
+
+## Question-bank ownership
+
+Scholarius treats each QTI XML file as the authoritative question bank. Question text, answers, metadata, and active/retired status are edited in the XML file itself. SQLite is used for users, the installed-bank catalogue, attempts, scores, and history; it is not the master copy of question content.
+
+Question-bank saves are written to a temporary file, parsed for validity, backed up to `<bank>.xml.bak`, and then atomically replace the original XML file.

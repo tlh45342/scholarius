@@ -205,3 +205,12 @@ Adds persistent attempt and answer history.
 - Migrates an existing SQLite database in place.
 
 Replace the included files, rebuild, complete a quiz, then open `/history`.
+
+## 0.0.10 - QTI-native editor consolidation
+
+- Removed the abandoned SQL-first question-bank editor branch and its duplicate templates and schema notes.
+- Unified question-bank management around the authoritative QTI XML file.
+- Added direct question editing for prompt, choices, correct answer, domain, objective, and status.
+- Added active/retired question status; retired questions remain in XML but are excluded from quizzes and tests.
+- Added safe XML writes using a temporary file, parse validation, atomic replacement, and a `.bak` backup.
+- Kept SQLite limited to catalogue, users, attempts, scores, and history.

@@ -11,6 +11,7 @@ class Question:
     domain: Optional[str] = None
     objective: Optional[str] = None
     question_type: str = "single-choice"
+    status: str = "active"
 
 
 @dataclass

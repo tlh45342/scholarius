@@ -27,7 +27,7 @@
         {% for question in questions %}
         <article class="question-editor-row">
             <div class="question-editor-content">
-                <div class="question-editor-id">{{ question.qid }}</div>
+                <div class="question-editor-id">{{ question.qid }}{% if question.status == "retired" %} · <span class="retired-label">Retired</span>{% endif %}</div>
                 <strong>{{ question.prompt }}</strong>
                 {% if question.domain or question.objective %}
                 <div class="question-editor-meta">
@@ -37,10 +37,10 @@
                 </div>
                 {% endif %}
             </div>
-            <form action="/qb-manage/edit/{{ bank[0] }}/questions/{{ question.qid }}/delete" method="post"
+            <div class="editor-actions"><a class="button button-primary compact-action" href="/qb-manage/edit/{{ bank[0] }}/questions/{{ question.qid }}">Edit</a><form action="/qb-manage/edit/{{ bank[0] }}/questions/{{ question.qid }}/delete" method="post"
                   onsubmit="return confirm('Delete question {{ question.qid }}? This cannot be undone.');">
                 <button class="button button-danger compact-action" type="submit">Delete</button>
-            </form>
+            </form></div>
         </article>
         {% endfor %}
     </div>

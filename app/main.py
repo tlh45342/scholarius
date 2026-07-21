@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 import re
 import uuid
+import shutil
 import xml.etree.ElementTree as ET
 from urllib.parse import quote_plus
 
@@ -427,11 +428,65 @@ def append_qti_question(
 
 
 def write_qti_tree(tree: ET.ElementTree, destination: Path):
+    """Safely replace the authoritative QTI file and retain one backup."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     ET.indent(tree, space="  ")
     temporary = destination.with_suffix(destination.suffix + ".tmp")
+    backup = destination.with_suffix(destination.suffix + ".bak")
     tree.write(temporary, encoding="utf-8", xml_declaration=True)
+    # Refuse to replace a good bank with malformed output.
+    ET.parse(temporary)
+    if destination.exists():
+        shutil.copy2(destination, backup)
     temporary.replace(destination)
+
+
+def find_qti_item(root, qid: str):
+    return next((e for e in root.iter() if local_name(e.tag) == "assessmentItem" and e.attrib.get("identifier") == qid), None)
+
+
+def set_item_metadata(item, label: str, value: str):
+    fields = [e for e in item.iter() if local_name(e.tag) == "qtiMetadataField"]
+    for field in fields:
+        label_elem = next((c for c in field if local_name(c.tag) == "fieldLabel"), None)
+        if label_elem is not None and (label_elem.text or "").strip() == label:
+            entry = next((c for c in field if local_name(c.tag) == "fieldEntry"), None)
+            if entry is None:
+                entry = ET.SubElement(field, "fieldEntry")
+            entry.text = value.strip()
+            return
+    metadata = next((c for c in item if local_name(c.tag) == "qtiMetadata"), None)
+    if metadata is None:
+        metadata = ET.SubElement(item, "qtiMetadata")
+    field = ET.SubElement(metadata, "qtiMetadataField")
+    ET.SubElement(field, "fieldLabel").text = label
+    ET.SubElement(field, "fieldEntry").text = value.strip()
+
+
+def update_qti_question(path: Path, qid: str, *, prompt: str, choices: list[str], correct_index: int, domain: str, objective: str, status: str):
+    tree = ET.parse(path)
+    item = find_qti_item(tree.getroot(), qid)
+    if item is None:
+        raise ValueError("Question not found.")
+    prompt_elem = next((e for e in item.iter() if local_name(e.tag) == "prompt"), None)
+    choice_elems = [e for e in item.iter() if local_name(e.tag) == "simpleChoice"]
+    if prompt_elem is None or len(choice_elems) < 2:
+        raise ValueError("This question uses a QTI structure the current editor cannot safely modify.")
+    if len(choices) != len(choice_elems):
+        raise ValueError("The number of answer choices cannot be changed in this editor yet.")
+    prompt_elem.text = prompt.strip()
+    for elem, text in zip(choice_elems, choices):
+        elem.text = text.strip()
+    correct_id = choice_elems[correct_index].attrib.get("identifier")
+    value_elem = next((e for e in item.iter() if local_name(e.tag) == "correctResponse"), None)
+    value_elem = next((e for e in value_elem.iter() if local_name(e.tag) == "value"), None) if value_elem is not None else None
+    if value_elem is None or not correct_id:
+        raise ValueError("The correct-answer declaration could not be updated safely.")
+    value_elem.text = correct_id
+    set_item_metadata(item, "domain", domain)
+    set_item_metadata(item, "objective", objective)
+    set_item_metadata(item, "status", status)
+    write_qti_tree(tree, path)
 
 
 def delete_qti_question(path: Path, qid: str) -> bool:
@@ -751,6 +806,49 @@ def qb_add_question(
     )
 
 
+@app.get("/qb-manage/edit/{quiz_id}/questions/{question_id}", response_class=HTMLResponse)
+def qb_edit_question_page(request: Request, quiz_id: str, question_id: str, error: str = ""):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row, questions = bank_question_summary(quiz_id)
+    question = next((q for q in questions if q.qid == question_id), None)
+    if row is None or question is None:
+        return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}?error=" + quote_plus("Question not found."), status_code=303)
+    return templates.TemplateResponse(request, "qb_question_edit.html", {
+        "request": request, "bank": row, "question": question, "error": error,
+        "is_admin": True, "version": __version__,
+    })
+
+
+@app.post("/qb-manage/edit/{quiz_id}/questions/{question_id}")
+def qb_edit_question_save(
+    request: Request, quiz_id: str, question_id: str,
+    prompt: str = Form(...), choice_a: str = Form(...), choice_b: str = Form(...),
+    choice_c: str = Form(""), choice_d: str = Form(""), correct_choice: int = Form(...),
+    domain: str = Form(""), objective: str = Form(""), status: str = Form("active"),
+):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id); path = bank_path_from_record(row)
+    try:
+        if row is None or path is None or not path.exists():
+            raise ValueError("Question bank file could not be found.")
+        choices = [choice_a.strip(), choice_b.strip()]
+        choices.extend(c.strip() for c in (choice_c, choice_d) if c.strip())
+        if not prompt.strip() or any(not c for c in choices[:2]):
+            raise ValueError("Question text and at least two choices are required.")
+        if correct_choice < 1 or correct_choice > len(choices):
+            raise ValueError("The correct answer must identify one of the supplied choices.")
+        if status not in {"active", "retired"}:
+            status = "active"
+        update_qti_question(path, question_id, prompt=prompt, choices=choices,
+                            correct_index=correct_choice-1, domain=domain,
+                            objective=objective, status=status)
+    except (ValueError, ET.ParseError) as exc:
+        return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}/questions/{question_id}?error=" + quote_plus(str(exc)), status_code=303)
+    return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}?message=" + quote_plus(f"Question '{question_id}' saved to XML."), status_code=303)
+
+
 @app.post("/qb-manage/edit/{quiz_id}/questions/{question_id}/delete")
 def qb_delete_question(request: Request, quiz_id: str, question_id: str):
     if not require_admin(request):
@@ -1027,17 +1125,18 @@ def action_page(request: Request, quiz_id: str):
             status_code=500,
         )
 
+    active_questions = [q for q in bank.questions if q.status != "retired"]
     domain_inventory = {}
-    for question in bank.questions:
+    for question in active_questions:
         name = question.domain or "Unclassified"
         domain_inventory[name] = domain_inventory.get(name, 0) + 1
 
     default_count = (
         bank.blueprint.default_question_count
         if bank.blueprint and bank.blueprint.default_question_count
-        else len(bank.questions)
+        else len(active_questions)
     )
-    default_count = min(default_count, len(bank.questions))
+    default_count = min(default_count, len(active_questions))
     planned_counts = {}
     if bank.blueprint:
         planned_counts = largest_remainder_counts(
@@ -1053,7 +1152,7 @@ def action_page(request: Request, quiz_id: str):
             "quiz_id": quiz_id,
             "title": row[0],
             "bank": bank,
-            "question_count": len(bank.questions),
+            "question_count": len(active_questions),
             "default_count": default_count,
             "planned_counts": planned_counts,
             "domain_inventory": domain_inventory,
@@ -1090,6 +1189,7 @@ def start_quiz(
 
     try:
         bank = load_qti_bank(QTI_DIR / row[0])
+        bank.questions = [q for q in bank.questions if q.status != "retired"]
         requested = question_count if question_count > 0 else None
         selection = build_test(
             bank,
