@@ -1,43 +1,55 @@
 # Scholarius
 
+Scholarius is a small, flexible, self-hosted quiz and test application. It is intended for people who want focused question-bank authoring and realistic practice tests without operating a full learning-management system such as Moodle.
 
-## Accessibility and project status
+Current release: **0.0.12**
 
-Scholarius is a work in progress and is **not considered production-ready**.
+## What Scholarius does
 
-Accessibility has been considered during the current design work. The project
-aims to build practical WCAG 2.2 Level AA fundamentals into the normal
-interface rather than requiring users to enable a separate “accessible mode.”
+- Imports and exports QTI-style XML question banks.
+- Creates and edits question banks through a web interface.
+- Adds, edits, retires, and deletes questions.
+- Supports quiz and test workflows, randomized selection, scoring, and history.
+- Stores user profiles and preferences, including light and dark themes.
+- Runs locally or in Docker with automatically generated self-signed HTTPS certificates.
 
-Current considerations include:
+## Question-bank ownership
 
-- readable light, dark, and system-following themes;
-- visible keyboard focus indicators;
-- labeled form controls and icon actions;
-- keyboard-accessible controls;
-- reduced-motion support;
-- layouts that tolerate zoom and larger text;
-- avoiding reliance on color alone for meaning;
-- keeping essential instructions visible rather than hiding them only in
-  tooltips.
+Each XML file is the authoritative copy of its question bank. Question text, answer choices, explanations, domain/objective metadata, and active/retired status are written to XML.
 
-These measures are a foundation, not a certification or guarantee of full
-WCAG conformance. Scholarius has not yet undergone a formal accessibility
-audit, assistive-technology test program, or production security review.
-Please be patient as the application and its user experience continue to
-develop.
+SQLite supports application concerns such as users, the installed-bank catalogue, attempts, scores, and history. It is not intended to replace the XML master copy of question content.
 
-## Question-bank authoring status
+Question-bank saves are written to a temporary file, parsed for validity, backed up to `<bank>.xml.bak`, and then atomically replace the original XML file.
 
-As of version 0.0.9, administrators can create a bank, add and delete
-single-answer multiple-choice questions, and export the current bank as
-QTI/XML. The XML file is the authoritative question-bank representation for
-this stage of development. More advanced editing, additional question types,
-and recovery/version-history features remain future work.
+A question marked **Retired (black label)** remains in its bank for historical and editorial purposes but is excluded from quizzes and tests.
 
-## Repository organization
+## Run with Docker
 
-Scholarius uses a deliberately small and predictable repository layout:
+```bash
+docker compose up -d --build
+```
+
+Then open:
+
+```text
+https://localhost:8000
+```
+
+The first connection will normally show a browser warning because Scholarius creates a self-signed certificate. The certificate and SQLite database persist in the mounted `app/` directory.
+
+To inspect startup:
+
+```bash
+docker compose logs -f scholarius
+```
+
+To stop the service:
+
+```bash
+docker compose down
+```
+
+## Repository layout
 
 ```text
 README.md
@@ -49,21 +61,14 @@ compose.yaml
 requirements.txt
 ```
 
-- `README.md` introduces the project and its current status.
-- `changelog.md` contains the complete release history in one file.
-- `docs/` contains design notes and supporting project documentation.
-- `app/` contains the Scholarius application.
+The root directory is the Docker build context. The active Python package, templates, static files, XML banks, database, and certificates are under `app/`.
 
-Version-specific `UPDATE-x.x.x.md` files are no longer used. New release
-information is added to `changelog.md`.
+## Project status and accessibility
 
-The distributed project does not currently include a `tests/` directory.
-Development validation may still be performed while preparing a release, but
-those temporary checks are not part of the end-user package. A formal test
-suite can be restored later if the project requires one.
+Scholarius is a work in progress and is **not considered production-ready**. It has not undergone a formal security review or accessibility certification.
 
-## Question-bank ownership
+The interface nevertheless includes practical accessibility foundations: labeled controls, keyboard focus indicators, reduced-motion support, light/dark/system themes, zoom-tolerant layouts, and labels that do not depend on color alone.
 
-Scholarius treats each QTI XML file as the authoritative question bank. Question text, answers, metadata, and active/retired status are edited in the XML file itself. SQLite is used for users, the installed-bank catalogue, attempts, scores, and history; it is not the master copy of question content.
+## License
 
-Question-bank saves are written to a temporary file, parsed for validity, backed up to `<bank>.xml.bak`, and then atomically replace the original XML file.
+No open-source license has yet been selected. Until a license file is added, the source is provided for evaluation and personal development use; redistribution rights are not granted automatically.
