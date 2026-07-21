@@ -21,7 +21,7 @@
         </div>
         <div class="form-group">
             <label for="prompt">Question text</label>
-            <textarea id="prompt" name="prompt" rows="5" required></textarea>
+            <textarea id="prompt" name="prompt" class="editor-textarea editor-question-text" rows="8" required></textarea>
         </div>
 
         <fieldset class="choice-fieldset">
@@ -43,6 +43,7 @@
         </div>
         <div class="form-group"><label for="domain">Domain</label><input id="domain" name="domain"></div>
         <div class="form-group"><label for="objective">Objective</label><input id="objective" name="objective"></div>
+        <div class="form-group"><label for="explanation">Explanation</label><textarea id="explanation" name="explanation" class="editor-textarea editor-explanation-text" rows="7" placeholder="Explain why the correct answer is correct and, where useful, why the alternatives are not."></textarea></div>
 
         <button class="button button-primary button-space" type="submit">Add Question</button>
     </form>

@@ -386,6 +386,7 @@ def append_qti_question(
     correct_index: int,
     domain: str = "",
     objective: str = "",
+    explanation: str = "",
 ):
     root = tree.getroot()
     existing_ids = {
@@ -415,6 +416,8 @@ def append_qti_question(
     if objective.strip():
         metadata_field(item, "objective", objective)
     metadata_field(item, "question_type", "single-choice")
+    metadata_field(item, "status", "active")
+    metadata_field(item, "explanation", explanation)
 
     body = ET.SubElement(item, "itemBody")
     interaction = ET.SubElement(
@@ -463,7 +466,7 @@ def set_item_metadata(item, label: str, value: str):
     ET.SubElement(field, "fieldEntry").text = value.strip()
 
 
-def update_qti_question(path: Path, qid: str, *, prompt: str, choices: list[str], correct_index: int, domain: str, objective: str, status: str):
+def update_qti_question(path: Path, qid: str, *, prompt: str, choices: list[str], correct_index: int, domain: str, objective: str, status: str, explanation: str):
     tree = ET.parse(path)
     item = find_qti_item(tree.getroot(), qid)
     if item is None:
@@ -486,6 +489,7 @@ def update_qti_question(path: Path, qid: str, *, prompt: str, choices: list[str]
     set_item_metadata(item, "domain", domain)
     set_item_metadata(item, "objective", objective)
     set_item_metadata(item, "status", status)
+    set_item_metadata(item, "explanation", explanation)
     write_qti_tree(tree, path)
 
 
@@ -550,6 +554,34 @@ def qb_list_page(request: Request, message: str = "", error: str = ""):
             "is_admin": True,
             "version": __version__,
         },
+    )
+
+
+@app.post("/qb-manage/bank/{quiz_id}/delete")
+def qb_delete_bank(request: Request, quiz_id: str):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id)
+    path = bank_path_from_record(row)
+    if row is None:
+        return RedirectResponse(
+            url="/qb-manage/list?error=" + quote_plus("Question bank not found."),
+            status_code=303,
+        )
+    conn = get_conn()
+    try:
+        conn.execute("DELETE FROM quizzes WHERE id=?", (quiz_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    if path and path.exists():
+        path.unlink()
+    backup = path.with_suffix(path.suffix + ".bak") if path else None
+    if backup and backup.exists():
+        backup.unlink()
+    return RedirectResponse(
+        url="/qb-manage/list?message=" + quote_plus(f"Question bank '{row['title']}' deleted."),
+        status_code=303,
     )
 
 
@@ -766,6 +798,7 @@ def qb_add_question(
     correct_choice: int = Form(...),
     domain: str = Form(""),
     objective: str = Form(""),
+    explanation: str = Form(""),
 ):
     if not require_admin(request):
         return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
@@ -793,6 +826,7 @@ def qb_add_question(
             correct_index=correct_choice - 1,
             domain=domain,
             objective=objective,
+            explanation=explanation,
         )
         write_qti_tree(tree, path)
     except (ValueError, ET.ParseError) as exc:
@@ -826,6 +860,7 @@ def qb_edit_question_save(
     prompt: str = Form(...), choice_a: str = Form(...), choice_b: str = Form(...),
     choice_c: str = Form(""), choice_d: str = Form(""), correct_choice: int = Form(...),
     domain: str = Form(""), objective: str = Form(""), status: str = Form("active"),
+    explanation: str = Form(""),
 ):
     if not require_admin(request):
         return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
@@ -843,7 +878,7 @@ def qb_edit_question_save(
             status = "active"
         update_qti_question(path, question_id, prompt=prompt, choices=choices,
                             correct_index=correct_choice-1, domain=domain,
-                            objective=objective, status=status)
+                            objective=objective, status=status, explanation=explanation)
     except (ValueError, ET.ParseError) as exc:
         return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}/questions/{question_id}?error=" + quote_plus(str(exc)), status_code=303)
     return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}?message=" + quote_plus(f"Question '{question_id}' saved to XML."), status_code=303)

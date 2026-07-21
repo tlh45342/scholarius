@@ -138,6 +138,7 @@ def load_qti_bank(file_path) -> QuestionBank:
                 objective=item_metadata.get("objective"),
                 question_type=item_metadata.get("question_type", "single-choice"),
                 status=item_metadata.get("status", "active"),
+                explanation=item_metadata.get("explanation", ""),
             )
         )
 

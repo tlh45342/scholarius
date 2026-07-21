@@ -7,50 +7,46 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body data-theme="{{ theme|default('system') }}">
-
 <main class="container container-wide card-with-corner">
-    <h1>Installed Question Banks</h1>
-    <p>Review the question banks currently available in Scholarius.</p>
+    <div class="panel-heading-row">
+        <div>
+            <h1>Installed Question Banks</h1>
+            <p>Open, export, or remove the question banks registered with Scholarius.</p>
+        </div>
+        <a class="button button-primary compact-action" href="/qb-manage/import">Import Bank</a>
+    </div>
 
-    {% if message %}
-    <div class="alert alert-success">{{ message }}</div>
-    {% endif %}
-
-    {% if error %}
-    <div class="alert alert-error">{{ error }}</div>
-    {% endif %}
+    {% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
 
     {% if quizzes %}
-    <table class="quiz-table">
-        <thead>
-            <tr>
-                <th>Title</th>
-                <th>Identifier</th>
-                <th>File</th>
-            </tr>
-        </thead>
-        <tbody>
+    <div class="bank-action-list">
         {% for quiz in quizzes %}
-            <tr>
-                <td>{{ quiz[1] }}</td>
-                <td><code>{{ quiz[0] }}</code></td>
-                <td>{{ quiz[2] }}</td>
-            </tr>
+        <article class="bank-action-row">
+            <div class="question-editor-content">
+                <strong>{{ quiz[1] }}</strong>
+                <div class="bank-identifier"><code>{{ quiz[0] }}</code> · {{ quiz[2] }}</div>
+            </div>
+            <div class="editor-actions">
+                <a class="button button-primary compact-action" href="/qb-manage/edit/{{ quiz[0] }}">Open</a>
+                <a class="button button-secondary compact-action" href="/qb-manage/export/{{ quiz[0] }}">Export</a>
+                <form action="/qb-manage/bank/{{ quiz[0] }}/delete" method="post"
+                      onsubmit="return confirm('Delete the question bank {{ quiz[1]|e }} and its XML file? This cannot be undone.');">
+                    <button class="button button-danger compact-action" type="submit">Delete</button>
+                </form>
+            </div>
+        </article>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
     {% else %}
     <div class="empty-state">
         <strong>No question banks are installed.</strong>
-        <span>Use Import to add a QTI XML question bank.</span>
+        <span>Use Import Bank or Create Bank to begin.</span>
     </div>
     {% endif %}
 
-    <a class="card-corner-icon" href="/qb-manage"
-       aria-label="Back to question bank management"
-       title="Back to question bank management">‹</a>
+    <a class="card-corner-icon" href="/qb-manage" aria-label="Back to question bank management" title="Back">‹</a>
 </main>
-
 {% include "_corner_nav.html" %}
 </body>
 </html>

@@ -1057,3 +1057,51 @@ textarea:focus-visible {
     font-size: 0.72rem;
     font-weight: 700;
 }
+
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.12 editor and bank-list polish
+   ------------------------------------------------------------------------- */
+.editor-textarea {
+    width: 100%;
+    min-height: 10rem;
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.editor-question-text {
+    min-height: 13rem;
+}
+
+.editor-explanation-text {
+    min-height: 11rem;
+}
+
+.form-group {
+    margin-bottom: 1.15rem;
+}
+
+.question-editor-row form,
+.bank-action-row form {
+    margin: 0;
+}
+
+.card-corner-icon,
+.corner-nav-button {
+    color: #ffffff;
+    background: #173f63;
+    border-color: #173f63;
+}
+
+.card-corner-icon:hover,
+.corner-nav-button:hover {
+    color: #ffffff;
+    background: #0f304d;
+    border-color: #0f304d;
+}
+
+body[data-theme="dark"] .card-corner-icon,
+body[data-theme="dark"] .corner-nav-button {
+    color: #ffffff;
+    background: #0d2438;
+    border-color: #6f8799;
+}
