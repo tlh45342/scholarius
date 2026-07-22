@@ -265,16 +265,16 @@ def inspect_qti_xml(data: bytes):
             problems.append(f"{qid}: missing prompt")
         elif len(choices) < 2:
             problems.append(f"{qid}: fewer than two choices")
-        elif len(correct_values) != 1:
-            problems.append(f"{qid}: requires exactly one correct answer")
-        elif correct_values[0] not in choice_ids:
+        elif not correct_values:
+            problems.append(f"{qid}: has no correct answer")
+        elif any(value not in choice_ids for value in correct_values):
             problems.append(f"{qid}: correct answer does not match a choice")
         else:
             supported += 1
 
     if supported == 0:
         detail = "; ".join(problems[:5])
-        raise ValueError("No supported single-answer questions were found." + (f" {detail}" if detail else ""))
+        raise ValueError("No supported choice questions were found." + (f" {detail}" if detail else ""))
 
     return quiz_id, title, supported, problems
 
@@ -383,9 +383,11 @@ def append_qti_question(
     qid: str,
     prompt: str,
     choices: list[str],
-    correct_index: int,
+    correct_indices: list[int],
+    question_type: str = "single-choice",
     domain: str = "",
     objective: str = "",
+    explanation: str = "",
 ):
     root = tree.getroot()
     existing_ids = {
@@ -396,31 +398,47 @@ def append_qti_question(
     if qid in existing_ids:
         raise ValueError(f"Question identifier '{qid}' already exists in this bank.")
 
+    if question_type not in {"true-false", "single-choice", "multiple-choice"}:
+        raise ValueError("Unsupported question type.")
+    if not correct_indices:
+        raise ValueError("Select at least one correct answer.")
+    if question_type == "multiple-choice" and len(correct_indices) < 2:
+        raise ValueError("Select-two-or-more questions require at least two correct answers.")
+    if question_type != "multiple-choice" and len(correct_indices) != 1:
+        raise ValueError("This question type requires exactly one correct answer.")
+
     item = ET.SubElement(
         qti_section(root),
         "assessmentItem",
         {"identifier": qid, "title": qid, "adaptive": "false", "timeDependent": "false"},
     )
+    multiple = question_type == "multiple-choice"
     response = ET.SubElement(
         item,
         "responseDeclaration",
-        {"identifier": "RESPONSE", "cardinality": "single", "baseType": "identifier"},
+        {"identifier": "RESPONSE", "cardinality": "multiple" if multiple else "single", "baseType": "identifier"},
     )
     correct_response = ET.SubElement(response, "correctResponse")
-    correct_id = f"C{correct_index + 1}"
-    ET.SubElement(correct_response, "value").text = correct_id
+    for index in correct_indices:
+        ET.SubElement(correct_response, "value").text = f"C{index + 1}"
 
     if domain.strip():
         metadata_field(item, "domain", domain)
     if objective.strip():
         metadata_field(item, "objective", objective)
-    metadata_field(item, "question_type", "single-choice")
+    metadata_field(item, "question_type", question_type)
+    metadata_field(item, "status", "active")
+    metadata_field(item, "explanation", explanation)
 
     body = ET.SubElement(item, "itemBody")
     interaction = ET.SubElement(
         body,
         "choiceInteraction",
-        {"responseIdentifier": "RESPONSE", "maxChoices": "1", "shuffle": "false"},
+        {
+            "responseIdentifier": "RESPONSE",
+            "maxChoices": str(len(correct_indices)) if multiple else "1",
+            "shuffle": "false",
+        },
     )
     ET.SubElement(interaction, "prompt").text = prompt.strip()
     for index, choice in enumerate(choices, start=1):
@@ -463,29 +481,54 @@ def set_item_metadata(item, label: str, value: str):
     ET.SubElement(field, "fieldEntry").text = value.strip()
 
 
-def update_qti_question(path: Path, qid: str, *, prompt: str, choices: list[str], correct_index: int, domain: str, objective: str, status: str):
+def update_qti_question(path: Path, qid: str, *, prompt: str, choices: list[str], correct_indices: list[int], question_type: str, domain: str, objective: str, status: str, explanation: str):
     tree = ET.parse(path)
     item = find_qti_item(tree.getroot(), qid)
     if item is None:
         raise ValueError("Question not found.")
+    if question_type not in {"true-false", "single-choice", "multiple-choice"}:
+        raise ValueError("Unsupported question type.")
+    if not correct_indices:
+        raise ValueError("Select at least one correct answer.")
+    if question_type == "multiple-choice" and len(correct_indices) < 2:
+        raise ValueError("Select-two-or-more questions require at least two correct answers.")
+    if question_type != "multiple-choice" and len(correct_indices) != 1:
+        raise ValueError("This question type requires exactly one correct answer.")
+
     prompt_elem = next((e for e in item.iter() if local_name(e.tag) == "prompt"), None)
     choice_elems = [e for e in item.iter() if local_name(e.tag) == "simpleChoice"]
     if prompt_elem is None or len(choice_elems) < 2:
         raise ValueError("This question uses a QTI structure the current editor cannot safely modify.")
     if len(choices) != len(choice_elems):
         raise ValueError("The number of answer choices cannot be changed in this editor yet.")
+    if any(index < 0 or index >= len(choice_elems) for index in correct_indices):
+        raise ValueError("A selected correct answer does not identify a supplied choice.")
+
     prompt_elem.text = prompt.strip()
     for elem, text in zip(choice_elems, choices):
         elem.text = text.strip()
-    correct_id = choice_elems[correct_index].attrib.get("identifier")
-    value_elem = next((e for e in item.iter() if local_name(e.tag) == "correctResponse"), None)
-    value_elem = next((e for e in value_elem.iter() if local_name(e.tag) == "value"), None) if value_elem is not None else None
-    if value_elem is None or not correct_id:
+
+    response = next((e for e in item.iter() if local_name(e.tag) == "responseDeclaration"), None)
+    correct_response = next((e for e in item.iter() if local_name(e.tag) == "correctResponse"), None)
+    interaction = next((e for e in item.iter() if local_name(e.tag) == "choiceInteraction"), None)
+    if response is None or correct_response is None or interaction is None:
         raise ValueError("The correct-answer declaration could not be updated safely.")
-    value_elem.text = correct_id
+    response.set("cardinality", "multiple" if question_type == "multiple-choice" else "single")
+    interaction.set("maxChoices", str(len(correct_indices)) if question_type == "multiple-choice" else "1")
+    for child in list(correct_response):
+        if local_name(child.tag) == "value":
+            correct_response.remove(child)
+    for index in correct_indices:
+        identifier = choice_elems[index].attrib.get("identifier")
+        if not identifier:
+            raise ValueError("A choice is missing its identifier.")
+        ET.SubElement(correct_response, "value").text = identifier
+
+    set_item_metadata(item, "question_type", question_type)
     set_item_metadata(item, "domain", domain)
     set_item_metadata(item, "objective", objective)
     set_item_metadata(item, "status", status)
+    set_item_metadata(item, "explanation", explanation)
     write_qti_tree(tree, path)
 
 
@@ -553,6 +596,34 @@ def qb_list_page(request: Request, message: str = "", error: str = ""):
     )
 
 
+@app.post("/qb-manage/bank/{quiz_id}/delete")
+def qb_delete_bank(request: Request, quiz_id: str):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id)
+    path = bank_path_from_record(row)
+    if row is None:
+        return RedirectResponse(
+            url="/qb-manage/list?error=" + quote_plus("Question bank not found."),
+            status_code=303,
+        )
+    conn = get_conn()
+    try:
+        conn.execute("DELETE FROM quizzes WHERE id=?", (quiz_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    if path and path.exists():
+        path.unlink()
+    backup = path.with_suffix(path.suffix + ".bak") if path else None
+    if backup and backup.exists():
+        backup.unlink()
+    return RedirectResponse(
+        url="/qb-manage/list?message=" + quote_plus(f"Question bank '{row['title']}' deleted."),
+        status_code=303,
+    )
+
+
 @app.get("/qb-manage/import", response_class=HTMLResponse)
 def qb_import_page(request: Request, error: str = ""):
     session = session_user(request)
@@ -610,7 +681,6 @@ def qb_export_page(request: Request, error: str = ""):
         {
             "request": request,
             "quizzes": bank_records(),
-            "message": message,
             "error": error,
             "is_admin": True,
             "version": __version__,
@@ -693,7 +763,7 @@ def qb_create_bank(
 
 
 @app.get("/qb-manage/edit", response_class=HTMLResponse)
-def qb_edit_page(request: Request, message: str = "", error: str = ""):
+def qb_edit_page(request: Request, error: str = ""):
     if not require_admin(request):
         return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
     return templates.TemplateResponse(
@@ -702,43 +772,10 @@ def qb_edit_page(request: Request, message: str = "", error: str = ""):
         {
             "request": request,
             "quizzes": bank_records(),
-            "message": message,
             "error": error,
             "is_admin": True,
             "version": __version__,
         },
-    )
-
-
-@app.post("/qb-manage/edit/{quiz_id}/delete")
-def qb_delete_bank(request: Request, quiz_id: str):
-    if not require_admin(request):
-        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
-
-    row = bank_record(quiz_id)
-    path = bank_path_from_record(row)
-    if row is None:
-        return RedirectResponse(
-            url="/qb-manage/edit?error=" + quote_plus("Question bank not found."),
-            status_code=303,
-        )
-
-    try:
-        if path is not None and path.exists():
-            path.unlink()
-        conn = get_conn()
-        conn.execute("DELETE FROM quizzes WHERE id=?", (quiz_id,))
-        conn.commit()
-        conn.close()
-    except OSError as exc:
-        return RedirectResponse(
-            url="/qb-manage/edit?error=" + quote_plus(f"The question bank file could not be deleted: {exc}"),
-            status_code=303,
-        )
-
-    return RedirectResponse(
-        url="/qb-manage/edit?message=" + quote_plus(f"Question bank '{quiz_id}' deleted."),
-        status_code=303,
     )
 
 
@@ -797,9 +834,12 @@ def qb_add_question(
     choice_b: str = Form(...),
     choice_c: str = Form(""),
     choice_d: str = Form(""),
-    correct_choice: int = Form(...),
+    question_type: str = Form("single-choice"),
+    correct_choice: int = Form(0),
+    correct_choices: list[int] = Form([]),
     domain: str = Form(""),
     objective: str = Form(""),
+    explanation: str = Form(""),
 ):
     if not require_admin(request):
         return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
@@ -816,17 +856,19 @@ def qb_add_question(
         choices.extend(c.strip() for c in (choice_c, choice_d) if c.strip())
         if any(not c for c in choices[:2]):
             raise ValueError("At least choices A and B are required.")
-        if correct_choice < 1 or correct_choice > len(choices):
-            raise ValueError("The correct answer must identify one of the supplied choices.")
+        selected = correct_choices if question_type == "multiple-choice" else [correct_choice]
+        correct_indices = sorted({value - 1 for value in selected if 1 <= value <= len(choices)})
         tree = ET.parse(path)
         append_qti_question(
             tree,
             qid=qid,
             prompt=prompt,
             choices=choices,
-            correct_index=correct_choice - 1,
+            correct_indices=correct_indices,
+            question_type=question_type,
             domain=domain,
             objective=objective,
+            explanation=explanation,
         )
         write_qti_tree(tree, path)
     except (ValueError, ET.ParseError) as exc:
@@ -858,8 +900,11 @@ def qb_edit_question_page(request: Request, quiz_id: str, question_id: str, erro
 def qb_edit_question_save(
     request: Request, quiz_id: str, question_id: str,
     prompt: str = Form(...), choice_a: str = Form(...), choice_b: str = Form(...),
-    choice_c: str = Form(""), choice_d: str = Form(""), correct_choice: int = Form(...),
+    choice_c: str = Form(""), choice_d: str = Form(""),
+    question_type: str = Form("single-choice"), correct_choice: int = Form(0),
+    correct_choices: list[int] = Form([]),
     domain: str = Form(""), objective: str = Form(""), status: str = Form("active"),
+    explanation: str = Form(""),
 ):
     if not require_admin(request):
         return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
@@ -871,13 +916,13 @@ def qb_edit_question_save(
         choices.extend(c.strip() for c in (choice_c, choice_d) if c.strip())
         if not prompt.strip() or any(not c for c in choices[:2]):
             raise ValueError("Question text and at least two choices are required.")
-        if correct_choice < 1 or correct_choice > len(choices):
-            raise ValueError("The correct answer must identify one of the supplied choices.")
+        selected = correct_choices if question_type == "multiple-choice" else [correct_choice]
+        correct_indices = sorted({value - 1 for value in selected if 1 <= value <= len(choices)})
         if status not in {"active", "retired"}:
             status = "active"
         update_qti_question(path, question_id, prompt=prompt, choices=choices,
-                            correct_index=correct_choice-1, domain=domain,
-                            objective=objective, status=status)
+                            correct_indices=correct_indices, question_type=question_type, domain=domain,
+                            objective=objective, status=status, explanation=explanation)
     except (ValueError, ET.ParseError) as exc:
         return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}/questions/{question_id}?error=" + quote_plus(str(exc)), status_code=303)
     return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}?message=" + quote_plus(f"Question '{question_id}' saved to XML."), status_code=303)
@@ -1289,7 +1334,7 @@ def quiz_ui(request: Request):
 
 
 @app.post("/answer")
-def answer(request: Request, qid: str = Form(...), choice: str = Form(...), marked: bool = Form(False)):
+async def answer(request: Request):
     token, _ = current_session(request)
     if not token:
         return RedirectResponse(url="/login", status_code=303)
@@ -1298,7 +1343,15 @@ def answer(request: Request, qid: str = Form(...), choice: str = Form(...), mark
     if not engine:
         return HTMLResponse("<h2>No quiz session</h2>", status_code=400)
 
-    engine.answer(qid, choice, marked=marked)
+    form = await request.form()
+    qid = str(form.get("qid", ""))
+    choices = [str(value) for value in form.getlist("choice") if str(value)]
+    marked = form.get("marked") is not None
+    question = next((item for item in engine.questions if item.qid == qid), None)
+    if question is None or not choices:
+        return HTMLResponse("<h2>Select an answer before continuing.</h2>", status_code=400)
+    selected = choices if question.question_type == "multiple-choice" else choices[0]
+    engine.answer(qid, selected, marked=marked)
     SESSION_INDEX[token] = SESSION_INDEX.get(token, 0) + 1
     return RedirectResponse(url="/quiz-ui", status_code=303)
 
@@ -1343,7 +1396,6 @@ def results_ui(request: Request):
             "domain_counts": session.get("domain_counts", {}),
             "selection_warnings": session.get("selection_warnings", []),
             "quiz_mode": session.get("quiz_mode", "quiz"),
-            "quiz_id": session.get("quiz_id"),
             "version": __version__,
             "is_admin": is_admin(session),
         },

@@ -109,15 +109,16 @@ def load_qti_bank(file_path) -> QuestionBank:
 
         prompt = ""
         choices = {}
-        correct = None
+        correct_values = []
 
         for elem in item.iter():
             tag = strip_ns(elem.tag)
             if tag == "correctResponse":
-                for child in elem.iter():
-                    if strip_ns(child.tag) == "value" and child.text:
-                        correct = child.text.strip()
-                        break
+                correct_values = [
+                    child.text.strip()
+                    for child in elem.iter()
+                    if strip_ns(child.tag) == "value" and child.text and child.text.strip()
+                ]
             elif tag == "prompt":
                 prompt = extract_text(elem)
             elif tag == "simpleChoice":
@@ -125,19 +126,26 @@ def load_qti_bank(file_path) -> QuestionBank:
                 if cid:
                     choices[cid] = extract_text(elem)
 
-        if not prompt or len(choices) < 2 or correct not in choices:
+        valid_correct = [answer for answer in correct_values if answer in choices]
+        if not prompt or len(choices) < 2 or not valid_correct or len(valid_correct) != len(correct_values):
             continue
+
+        declared_type = item_metadata.get("question_type", "").strip()
+        if not declared_type:
+            declared_type = "multiple-choice" if len(valid_correct) > 1 else "single-choice"
 
         questions.append(
             Question(
                 qid=qid,
                 prompt=prompt,
                 choices=choices,
-                correct=correct,
+                correct=valid_correct[0],
+                correct_answers=valid_correct,
                 domain=item_metadata.get("domain"),
                 objective=item_metadata.get("objective"),
-                question_type=item_metadata.get("question_type", "single-choice"),
+                question_type=declared_type,
                 status=item_metadata.get("status", "active"),
+                explanation=item_metadata.get("explanation", ""),
             )
         )
 

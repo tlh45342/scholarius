@@ -1105,3 +1105,12 @@ body[data-theme="dark"] .corner-nav-button {
     background: #0d2438;
     border-color: #6f8799;
 }
+
+
+/* Question type and multi-answer editor */
+.field-help { margin: .45rem 0 0; opacity: .78; font-size: .94rem; }
+.answer-editor-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: end; }
+.answer-editor-row .answer-text { margin-bottom: .8rem; }
+.correct-answer-control { display: inline-flex; gap: .45rem; align-items: center; min-width: 6.5rem; margin-bottom: 1.45rem; cursor: pointer; font-weight: 650; }
+.correct-answer-control input { width: 1.15rem; height: 1.15rem; }
+@media (max-width: 640px) { .answer-editor-row { grid-template-columns: 1fr; gap: 0; } .correct-answer-control { margin: -.35rem 0 1rem; } }

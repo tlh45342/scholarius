@@ -1,54 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Question - Scholarius</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Add Question - Scholarius</title><link rel="stylesheet" href="/static/style.css"></head>
 <body data-theme="{{ theme|default('system') }}">
 <main class="container container-wide card-with-corner">
-    <h1>Add Question</h1>
-    <p>Add a single-answer multiple-choice question to <strong>{{ bank[1] }}</strong>.</p>
-
-    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
-
-    <form action="/qb-manage/edit/{{ bank[0] }}/questions/new" method="post">
-        <div class="form-group">
-            <label for="question_id">Question identifier</label>
-            <input id="question_id" name="question_id" required maxlength="80"
-                   pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,79}" placeholder="q001">
-        </div>
-        <div class="form-group">
-            <label for="prompt">Question text</label>
-            <textarea id="prompt" name="prompt" rows="5" required></textarea>
-        </div>
-
-        <fieldset class="choice-fieldset">
-            <legend>Answer choices</legend>
-            <div class="form-group"><label for="choice_a">Choice A</label><input id="choice_a" name="choice_a" required></div>
-            <div class="form-group"><label for="choice_b">Choice B</label><input id="choice_b" name="choice_b" required></div>
-            <div class="form-group"><label for="choice_c">Choice C</label><input id="choice_c" name="choice_c"></div>
-            <div class="form-group"><label for="choice_d">Choice D</label><input id="choice_d" name="choice_d"></div>
-        </fieldset>
-
-        <div class="form-group">
-            <label for="correct_choice">Correct choice</label>
-            <select id="correct_choice" name="correct_choice" required>
-                <option value="1">A</option>
-                <option value="2">B</option>
-                <option value="3">C</option>
-                <option value="4">D</option>
-            </select>
-        </div>
-        <div class="form-group"><label for="domain">Domain</label><input id="domain" name="domain"></div>
-        <div class="form-group"><label for="objective">Objective</label><input id="objective" name="objective"></div>
-
-        <button class="button button-primary button-space" type="submit">Add Question</button>
-    </form>
-
-    <a class="card-corner-icon" href="/qb-manage/edit/{{ bank[0] }}" aria-label="Back to bank editor" title="Back">‹</a>
-</main>
-{% include "_corner_nav.html" %}
-</body>
-</html>
+<h1>Add Question</h1><p>Add a question to <strong>{{ bank[1] }}</strong>.</p>
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+<form action="/qb-manage/edit/{{ bank[0] }}/questions/new" method="post" id="question-form">
+<div class="form-group"><label for="question_id">Question identifier</label><input id="question_id" name="question_id" required maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,79}" placeholder="q001"></div>
+<div class="form-group"><label for="question_type">Question type</label><select id="question_type" name="question_type"><option value="single-choice">Single Choice — select one</option><option value="multiple-choice">Multiple Choice — select two or more</option><option value="true-false">True / False</option></select><p class="field-help" id="type-help">The learner selects one answer.</p></div>
+<div class="form-group"><label for="prompt">Question text</label><textarea id="prompt" name="prompt" class="editor-textarea editor-question-text" rows="8" required></textarea></div>
+<fieldset class="choice-fieldset"><legend>Answer choices and correct answer(s)</legend>
+{% for label in ['A','B','C','D'] %}<div class="answer-editor-row"><div class="form-group answer-text"><label for="choice_{{ label|lower }}">Choice {{ label }}</label><input id="choice_{{ label|lower }}" name="choice_{{ label|lower }}" {% if loop.index0 < 2 %}required{% endif %}></div><label class="correct-answer-control"><input class="single-correct" type="radio" name="correct_choice" value="{{ loop.index }}" {% if loop.first %}checked{% endif %}><input class="multiple-correct" type="checkbox" name="correct_choices" value="{{ loop.index }}" hidden><span>Correct</span></label></div>{% endfor %}
+</fieldset>
+<div class="form-group"><label for="domain">Domain</label><input id="domain" name="domain"></div><div class="form-group"><label for="objective">Objective</label><input id="objective" name="objective"></div>
+<div class="form-group"><label for="explanation">Explanation</label><textarea id="explanation" name="explanation" class="editor-textarea editor-explanation-text" rows="7" placeholder="Explain why the correct answer is correct and, where useful, why the alternatives are not."></textarea></div>
+<button class="button button-primary button-space" type="submit">Add Question</button></form>
+<a class="card-corner-icon" href="/qb-manage/edit/{{ bank[0] }}" aria-label="Back to bank editor" title="Back">‹</a></main>{% include "_corner_nav.html" %}
+<script>const type=document.getElementById('question_type'), help=document.getElementById('type-help');function syncType(){const multi=type.value==='multiple-choice';document.querySelectorAll('.single-correct').forEach(e=>{e.hidden=multi;e.disabled=multi});document.querySelectorAll('.multiple-correct').forEach(e=>{e.hidden=!multi;e.disabled=!multi});help.textContent=multi?'The learner must select every correct answer. Choose at least two correct choices.':type.value==='true-false'?'The learner selects either True or False.':'The learner selects one answer.';}type.addEventListener('change',syncType);syncType();</script>
+</body></html>

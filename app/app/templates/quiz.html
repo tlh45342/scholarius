@@ -21,10 +21,11 @@
 
         <p class="left-text"><strong>{{ question.prompt }}</strong></p>
 
+        {% if question.question_type == "multiple-choice" %}<p class="field-help"><strong>Select all correct answers.</strong></p>{% endif %}
         {% for key, value in question.choices.items() %}
         <label class="choice-row">
-            <input type="radio" name="choice" value="{{ key }}" required>
-            <span>{{ value }}</span>
+            <input type="{% if question.question_type == 'multiple-choice' %}checkbox{% else %}radio{% endif %}" name="choice" value="{{ key }}" {% if question.question_type != 'multiple-choice' %}required{% endif %}>
+            <span><strong>{{ key }}</strong>: {{ value }}</span>
         </label>
         {% endfor %}
 

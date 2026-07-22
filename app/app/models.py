@@ -8,10 +8,19 @@ class Question:
     prompt: str
     choices: Dict[str, str]
     correct: Optional[str] = None
+    correct_answers: List[str] = field(default_factory=list)
     domain: Optional[str] = None
     objective: Optional[str] = None
     question_type: str = "single-choice"
     status: str = "active"
+    explanation: str = ""
+
+    def __post_init__(self):
+        if self.correct_answers:
+            self.correct_answers = list(dict.fromkeys(self.correct_answers))
+            self.correct = self.correct_answers[0]
+        elif self.correct:
+            self.correct_answers = [self.correct]
 
 
 @dataclass

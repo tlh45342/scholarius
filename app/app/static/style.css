@@ -1058,20 +1058,59 @@ textarea:focus-visible {
     font-weight: 700;
 }
 
-
-/* Dark, declarative card navigation used by authoring screens. */
-.card-corner-icon-primary,
-.card-corner-icon-primary:hover {
-    color: #ffffff;
-    background: #0b2948;
-    border-color: #0b2948;
+/* -------------------------------------------------------------------------
+   Scholarius 0.0.12 editor and bank-list polish
+   ------------------------------------------------------------------------- */
+.editor-textarea {
+    width: 100%;
+    min-height: 10rem;
+    resize: vertical;
+    line-height: 1.55;
 }
 
-.card-corner-icon-primary:hover {
-    background: #123f6b;
-    border-color: #123f6b;
+.editor-question-text {
+    min-height: 13rem;
 }
 
+.editor-explanation-text {
+    min-height: 11rem;
+}
+
+.form-group {
+    margin-bottom: 1.15rem;
+}
+
+.question-editor-row form,
 .bank-action-row form {
     margin: 0;
 }
+
+.card-corner-icon,
+.corner-nav-button {
+    color: #ffffff;
+    background: #173f63;
+    border-color: #173f63;
+}
+
+.card-corner-icon:hover,
+.corner-nav-button:hover {
+    color: #ffffff;
+    background: #0f304d;
+    border-color: #0f304d;
+}
+
+body[data-theme="dark"] .card-corner-icon,
+body[data-theme="dark"] .corner-nav-button {
+    color: #ffffff;
+    background: #0d2438;
+    border-color: #6f8799;
+}
+
+
+/* Question type and multi-answer editor */
+.field-help { margin: .45rem 0 0; opacity: .78; font-size: .94rem; }
+.answer-editor-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: end; }
+.answer-editor-row .answer-text { margin-bottom: .8rem; }
+.correct-answer-control { display: inline-flex; gap: .45rem; align-items: center; min-width: 6.5rem; margin-bottom: 1.45rem; cursor: pointer; font-weight: 650; }
+.correct-answer-control input { width: 1.15rem; height: 1.15rem; }
+@media (max-width: 640px) { .answer-editor-row { grid-template-columns: 1fr; gap: 0; } .correct-answer-control { margin: -.35rem 0 1rem; } }
