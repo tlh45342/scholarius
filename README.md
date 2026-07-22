@@ -71,4 +71,4 @@ The interface nevertheless includes practical accessibility foundations: labeled
 
 ## License
 
-No open-source license has yet been selected. Until a license file is added, the source is provided for evaluation and personal development use; redistribution rights are not granted automatically.
+Scholarius is released under the MIT License. See `LICENSE` for the full terms.
