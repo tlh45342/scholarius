@@ -15,6 +15,8 @@
         </div>
         <div class="editor-actions">
             <a class="button button-primary compact-action" href="/qb-manage/edit/{{ bank[0] }}/questions/new">Add Question</a>
+            <a class="button button-secondary compact-action" href="/qb-manage/edit/{{ bank[0] }}/details">Edit Header</a>
+            <a class="button button-secondary compact-action" href="/qb-manage/edit/{{ bank[0] }}/taxonomy">Domains / Subjects</a>
             <a class="button button-secondary compact-action" href="/qb-manage/export/{{ bank[0] }}">Export Bank</a>
         </div>
     </div>
@@ -27,7 +29,7 @@
         {% for question in questions %}
         <article class="question-editor-row">
             <div class="question-editor-content">
-                <div class="question-editor-id">{{ question.qid }}{% if question.status == "retired" %} · <span class="retired-label">Retired</span>{% endif %}</div>
+                <div class="question-editor-id">Question {{ loop.index }}{% if question.status == "retired" %} · <span class="retired-label">Retired</span>{% endif %}</div>
                 <strong>{{ question.prompt }}</strong>
                 {% if question.domain or question.objective %}
                 <div class="question-editor-meta">

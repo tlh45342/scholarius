@@ -342,6 +342,71 @@ def validate_identifier(value: str, *, field_name: str = "Identifier") -> str:
     return value
 
 
+def generate_question_identifier(existing_ids: set[str]) -> str:
+    """Return a compact QST###### identifier that is unique in one bank."""
+    import secrets
+    for _ in range(1000):
+        candidate = f"QST{secrets.randbelow(1_000_000):06d}"
+        if candidate not in existing_ids:
+            return candidate
+    raise ValueError("Could not generate a unique question identifier.")
+
+
+def root_metadata(root) -> dict[str, str]:
+    values = {}
+    for field in (e for e in root.iter() if local_name(e.tag) == "qtiMetadataField"):
+        label = next((c for c in field if local_name(c.tag) == "fieldLabel"), None)
+        entry = next((c for c in field if local_name(c.tag) == "fieldEntry"), None)
+        if label is not None and entry is not None and (label.text or "").strip():
+            values[(label.text or "").strip()] = (entry.text or "").strip()
+    return values
+
+
+def set_root_metadata(root, label: str, value: str):
+    metadata = next((c for c in root if local_name(c.tag) == "qtiMetadata"), None)
+    if metadata is None:
+        metadata = ET.Element("qtiMetadata")
+        root.insert(0, metadata)
+    for field in (e for e in metadata if local_name(e.tag) == "qtiMetadataField"):
+        label_elem = next((c for c in field if local_name(c.tag) == "fieldLabel"), None)
+        if label_elem is not None and (label_elem.text or "").strip() == label:
+            entry = next((c for c in field if local_name(c.tag) == "fieldEntry"), None)
+            if entry is None:
+                entry = ET.SubElement(field, "fieldEntry")
+            entry.text = value.strip()
+            return
+    field = ET.SubElement(metadata, "qtiMetadataField")
+    ET.SubElement(field, "fieldLabel").text = label
+    ET.SubElement(field, "fieldEntry").text = value.strip()
+
+
+def read_taxonomy(root) -> list[dict]:
+    taxonomy = next((e for e in root if local_name(e.tag) == "scholariusTaxonomy"), None)
+    if taxonomy is None:
+        return []
+    result = []
+    for domain in taxonomy:
+        if local_name(domain.tag) != "domain":
+            continue
+        name = (domain.attrib.get("name") or "").strip()
+        if not name:
+            continue
+        subjects = [(s.attrib.get("name") or "").strip() for s in domain if local_name(s.tag) == "subject"]
+        result.append({"name": name, "subjects": [x for x in subjects if x]})
+    return result
+
+
+def write_taxonomy(root, domains: list[dict]):
+    for child in list(root):
+        if local_name(child.tag) == "scholariusTaxonomy":
+            root.remove(child)
+    taxonomy = ET.SubElement(root, "scholariusTaxonomy")
+    for domain in domains:
+        d = ET.SubElement(taxonomy, "domain", {"name": domain["name"]})
+        for subject in domain.get("subjects", []):
+            ET.SubElement(d, "subject", {"name": subject})
+
+
 def create_empty_qti_bank(quiz_id: str, title: str, description: str = "") -> ET.ElementTree:
     root = ET.Element("assessmentTest", {"identifier": quiz_id, "title": title})
     metadata = ET.SubElement(root, "qtiMetadata")
@@ -804,6 +869,95 @@ def qb_edit_bank(request: Request, quiz_id: str, message: str = "", error: str =
     )
 
 
+@app.get("/qb-manage/edit/{quiz_id}/details", response_class=HTMLResponse)
+def qb_edit_bank_details_page(request: Request, quiz_id: str, message: str = "", error: str = ""):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id); path = bank_path_from_record(row)
+    if row is None or path is None or not path.exists():
+        return RedirectResponse(url="/qb-manage/edit", status_code=303)
+    tree = ET.parse(path); root = tree.getroot()
+    return templates.TemplateResponse(request, "qb_bank_header.html", {
+        "request": request, "bank": row, "metadata": root_metadata(root),
+        "message": message, "error": error, "is_admin": True, "version": __version__,
+    })
+
+
+@app.post("/qb-manage/edit/{quiz_id}/details")
+def qb_edit_bank_details_save(
+    request: Request, quiz_id: str, title: str = Form(...), author: str = Form(""),
+    passing_score: str = Form(""), points: str = Form(""), bank_version: str = Form("1.0"),
+):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id); path = bank_path_from_record(row)
+    try:
+        if row is None or path is None or not path.exists():
+            raise ValueError("Question bank file could not be found.")
+        title = title.strip()
+        if not title:
+            raise ValueError("Title is required.")
+        tree = ET.parse(path); root = tree.getroot(); root.set("title", title)
+        for label, value in {"author": author, "passing_score": passing_score, "points": points, "bank_version": bank_version}.items():
+            set_root_metadata(root, label, value)
+        section = next((e for e in root.iter() if local_name(e.tag) == "assessmentSection"), None)
+        if section is not None: section.set("title", title)
+        write_qti_tree(tree, path)
+        conn = get_conn(); conn.execute("UPDATE quizzes SET title=? WHERE id=?", (title, quiz_id)); conn.commit(); conn.close()
+    except (ValueError, ET.ParseError) as exc:
+        return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}/details?error=" + quote_plus(str(exc)), status_code=303)
+    return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}/details?message=" + quote_plus("Bank header saved to XML."), status_code=303)
+
+
+@app.get("/qb-manage/edit/{quiz_id}/taxonomy", response_class=HTMLResponse)
+def qb_taxonomy_page(request: Request, quiz_id: str, message: str = "", error: str = ""):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id); path = bank_path_from_record(row)
+    if row is None or path is None or not path.exists():
+        return RedirectResponse(url="/qb-manage/edit", status_code=303)
+    tree = ET.parse(path)
+    return templates.TemplateResponse(request, "qb_taxonomy.html", {
+        "request": request, "bank": row, "domains": read_taxonomy(tree.getroot()),
+        "message": message, "error": error, "is_admin": True, "version": __version__,
+    })
+
+
+@app.post("/qb-manage/edit/{quiz_id}/taxonomy")
+async def qb_taxonomy_save(request: Request, quiz_id: str):
+    if not require_admin(request):
+        return HTMLResponse("<h2>Administrator access required</h2>", status_code=403)
+    row = bank_record(quiz_id); path = bank_path_from_record(row)
+    try:
+        if row is None or path is None or not path.exists():
+            raise ValueError("Question bank file could not be found.")
+        form = await request.form()
+        raw = str(form.get("taxonomy", ""))
+        domains = []
+        seen = set()
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line: continue
+            parts = [part.strip() for part in line.split("|", 1)]
+            name = parts[0]
+            key = name.casefold()
+            if key in seen: raise ValueError(f"Duplicate domain: {name}")
+            seen.add(key)
+            subjects = []
+            if len(parts) == 2:
+                subject_seen = set()
+                for subject in (x.strip() for x in parts[1].split(",")):
+                    if not subject: continue
+                    skey = subject.casefold()
+                    if skey not in subject_seen:
+                        subjects.append(subject); subject_seen.add(skey)
+            domains.append({"name": name, "subjects": subjects})
+        tree = ET.parse(path); write_taxonomy(tree.getroot(), domains); write_qti_tree(tree, path)
+    except (ValueError, ET.ParseError) as exc:
+        return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}/taxonomy?error=" + quote_plus(str(exc)), status_code=303)
+    return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}/taxonomy?message=" + quote_plus("Domains and subjects saved to XML."), status_code=303)
+
+
 @app.get("/qb-manage/edit/{quiz_id}/questions/new", response_class=HTMLResponse)
 def qb_new_question_page(request: Request, quiz_id: str, error: str = ""):
     if not require_admin(request):
@@ -811,12 +965,14 @@ def qb_new_question_page(request: Request, quiz_id: str, error: str = ""):
     row = bank_record(quiz_id)
     if row is None:
         return RedirectResponse(url="/qb-manage/edit", status_code=303)
+    taxonomy = read_taxonomy(ET.parse(bank_path_from_record(row)).getroot())
     return templates.TemplateResponse(
         request,
         "qb_question_new.html",
         {
             "request": request,
             "bank": row,
+            "taxonomy": taxonomy,
             "error": error,
             "is_admin": True,
             "version": __version__,
@@ -828,7 +984,6 @@ def qb_new_question_page(request: Request, quiz_id: str, error: str = ""):
 def qb_add_question(
     request: Request,
     quiz_id: str,
-    question_id: str = Form(...),
     prompt: str = Form(...),
     choice_a: str = Form(...),
     choice_b: str = Form(...),
@@ -848,7 +1003,9 @@ def qb_add_question(
     try:
         if row is None or path is None or not path.exists():
             raise ValueError("Question bank file could not be found.")
-        qid = validate_identifier(question_id, field_name="Question identifier")
+        tree = ET.parse(path)
+        existing_ids = {e.attrib.get("identifier") for e in tree.getroot().iter() if local_name(e.tag) == "assessmentItem"}
+        qid = generate_question_identifier(existing_ids)
         prompt = prompt.strip()
         if not prompt:
             raise ValueError("Question text is required.")
@@ -858,7 +1015,6 @@ def qb_add_question(
             raise ValueError("At least choices A and B are required.")
         selected = correct_choices if question_type == "multiple-choice" else [correct_choice]
         correct_indices = sorted({value - 1 for value in selected if 1 <= value <= len(choices)})
-        tree = ET.parse(path)
         append_qti_question(
             tree,
             qid=qid,
@@ -890,8 +1046,9 @@ def qb_edit_question_page(request: Request, quiz_id: str, question_id: str, erro
     question = next((q for q in questions if q.qid == question_id), None)
     if row is None or question is None:
         return RedirectResponse(url=f"/qb-manage/edit/{quiz_id}?error=" + quote_plus("Question not found."), status_code=303)
+    taxonomy = read_taxonomy(ET.parse(bank_path_from_record(row)).getroot())
     return templates.TemplateResponse(request, "qb_question_edit.html", {
-        "request": request, "bank": row, "question": question, "error": error,
+        "request": request, "bank": row, "question": question, "taxonomy": taxonomy, "error": error,
         "is_admin": True, "version": __version__,
     })
 

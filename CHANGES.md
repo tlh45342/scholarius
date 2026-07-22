@@ -1,3 +1,26 @@
+# Scholarius Changes
+
+## 0.0.14 — Bank Metadata and Controlled Taxonomy
+
+- Hid internal question and choice identifiers from normal question listings.
+- Added a blue Home button to the results page.
+- Added bank/test header editing for title, author, passing score, total points, and version.
+- Added automatic `QST######` identifiers when questions are created.
+- Added bank-level Domain and Subject management stored in the authoritative XML.
+- Replaced free-text Domain and Subject entry with controlled selections in question editors.
+
+## 0.0.13 — Question Types and Multiple Answers
+
+- Declared the project license as MIT.
+- Added an explicit question-type selector to Add Question and Edit Question.
+- Added Single Choice, Multiple Choice (select two or more), and True/False types.
+- Added checkbox-based selection of multiple correct answers in the editor.
+- Wrote multiple correct responses using standard QTI `multiple` cardinality.
+- Updated quiz presentation and scoring to require an exact match for multi-answer questions.
+- Preserved selected and correct multi-answer values in attempt history.
+
+## 0.0.12 — Bank Controls and Editor Polish
+
 # SSL Integration Changes Summary
 
 **Purpose:** Add automatic HTTPS support with self-signed certificates
