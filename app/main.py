@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 from datetime import datetime, timezone
 import re
 import uuid
@@ -1234,6 +1235,65 @@ def history_page(request: Request):
     })
 
 
+@app.get("/history/attempt/{attempt_id}", response_class=HTMLResponse)
+def review_history_attempt(request: Request, attempt_id: int, question: int = 1):
+    session = session_user(request)
+    if not session:
+        return redirect_to_login()
+    conn = get_conn()
+    attempt = conn.execute(
+        """SELECT a.*, COALESCE(q.title, a.quiz_id) AS title, q.filename
+           FROM attempts a LEFT JOIN quizzes q ON q.id=a.quiz_id
+           WHERE a.id=? AND a.username=?""",
+        (attempt_id, session.get("username", "unknown")),
+    ).fetchone()
+    if not attempt:
+        conn.close()
+        return HTMLResponse("Attempt not found", status_code=404)
+    answers = conn.execute(
+        "SELECT * FROM attempt_answers WHERE attempt_id=? AND username=? ORDER BY id",
+        (attempt_id, session.get("username", "unknown")),
+    ).fetchall()
+    conn.close()
+    if not answers:
+        return HTMLResponse("No recorded answers for this attempt. <a href='/history'>History</a>")
+    bank_questions = {}
+    if any(not row["question_snapshot"] for row in answers) and attempt["filename"]:
+        try:
+            bank = load_qti_bank(QTI_DIR / attempt["filename"])
+            bank_questions = {item.qid: item for item in bank.questions}
+        except (OSError, ValueError, ET.ParseError):
+            pass
+    position = min(max(question, 1), len(answers))
+    answer = answers[position - 1]
+    snapshot = None
+    if answer["question_snapshot"]:
+        try:
+            snapshot = json.loads(answer["question_snapshot"])
+        except (ValueError, TypeError):
+            pass
+    historical = bool(snapshot)
+    if not snapshot:
+        item = bank_questions.get(answer["question_id"])
+        if item:
+            snapshot = {
+                "prompt": item.prompt, "choices": item.choices,
+                "explanation": item.explanation, "question_type": item.question_type,
+            }
+        else:
+            snapshot = {"prompt": "Original question text unavailable",
+                        "choices": {}, "explanation": "", "question_type": ""}
+    # Answer IDs are stored as comma-separated identifiers by the quiz engine.
+    selected = set(filter(None, (answer["selected_answer"] or "").split(",")))
+    correct = set(filter(None, (answer["correct_answer"] or "").split(",")))
+    return templates.TemplateResponse(request, "attempt_review.html", {
+        "attempt": attempt, "answer": answer, "snapshot": snapshot,
+        "selected": selected, "correct": correct, "historical": historical,
+        "position": position, "total": len(answers), "version": __version__,
+        "is_admin": is_admin(session),
+    })
+
+
 @app.post("/history/attempt/{attempt_id}/delete")
 def delete_history_attempt(request: Request, attempt_id: int):
     session = session_user(request)
@@ -1551,14 +1611,19 @@ def results_ui(request: Request):
              engine.score(), len(engine.questions)),
         )
         attempt_id = cur.lastrowid
-        for row in engine.answer_rows():
+        for question, row in zip(engine.questions, engine.answer_rows()):
+            snapshot = json.dumps({
+                "prompt": question.prompt, "choices": question.choices,
+                "explanation": question.explanation,
+                "question_type": question.question_type,
+            })
             conn.execute(
                 """INSERT INTO attempt_answers
-                   (attempt_id, username, quiz_id, question_id, domain, objective, selected_answer, correct_answer, was_correct, marked_for_review, answered_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (attempt_id, username, quiz_id, question_id, domain, objective, selected_answer, correct_answer, was_correct, marked_for_review, answered_at, question_snapshot)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (attempt_id, session.get("username", "unknown"), session.get("quiz_id"), row["question_id"],
                  row["domain"], row["objective"], row["selected_answer"], row["correct_answer"],
-                 int(row["was_correct"]), int(row["marked_for_review"]), now),
+                 int(row["was_correct"]), int(row["marked_for_review"]), now, snapshot),
             )
         conn.commit(); conn.close()
         session["saved"] = True

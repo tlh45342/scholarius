@@ -55,6 +55,7 @@ def init_db():
         question_id TEXT NOT NULL, domain TEXT, objective TEXT, selected_answer TEXT, correct_answer TEXT,
         was_correct INTEGER NOT NULL, marked_for_review INTEGER NOT NULL DEFAULT 0, answered_at TEXT NOT NULL,
         FOREIGN KEY(attempt_id) REFERENCES attempts(id) ON DELETE CASCADE)""")
+    _add_column(conn, "attempt_answers", "question_snapshot TEXT")
     cur.execute("""CREATE INDEX IF NOT EXISTS idx_attempt_answers_user_quiz ON attempt_answers(username, quiz_id)""")
     cur.execute("""CREATE INDEX IF NOT EXISTS idx_attempt_answers_question ON attempt_answers(username, quiz_id, question_id)""")
     conn.commit()

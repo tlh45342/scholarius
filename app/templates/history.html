@@ -28,6 +28,7 @@
 {% endfor %}
 </tbody></table>
 <div class="history-attempt-actions">
+<button type="button" id="review-selected-attempt" disabled>Review selected attempt</button>
 <button type="button" id="clear-attempt-selection" disabled>Clear selection</button>
 <button type="submit" id="delete-selected-attempt" disabled>Delete selected attempt</button>
 </div>
@@ -36,12 +37,13 @@
 (function () {
   const form = document.getElementById('attempt-delete-form');
   const rows = Array.from(form.querySelectorAll('.history-attempt-row'));
+  const review = document.getElementById('review-selected-attempt');
   const clear = document.getElementById('clear-attempt-selection');
   const remove = document.getElementById('delete-selected-attempt');
   function update() {
     const selected = form.querySelector('input[name="selected_attempt"]:checked');
     rows.forEach(row => row.classList.toggle('selected', !!selected && row.dataset.attemptId === selected.value));
-    clear.disabled = remove.disabled = !selected;
+    clear.disabled = remove.disabled = review.disabled = !selected;
     form.action = selected ? '/history/attempt/' + encodeURIComponent(selected.value) + '/delete' : '/history/attempt/0/delete';
   }
   rows.forEach(row => {
@@ -51,6 +53,10 @@
     });
   });
   form.querySelectorAll('input[name="selected_attempt"]').forEach(input => input.addEventListener('change', update));
+  review.addEventListener('click', () => {
+    const selected = form.querySelector('input[name="selected_attempt"]:checked');
+    if (selected) window.location.href = '/history/attempt/' + encodeURIComponent(selected.value);
+  });
   clear.addEventListener('click', () => {
     form.querySelectorAll('input[name="selected_attempt"]').forEach(input => input.checked = false);
     update();

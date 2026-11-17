@@ -1,5 +1,11 @@
 # Scholarius Changes
 
+## 0.0.16 — Attempt Review
+
+- Review one completed question at a time with Previous and Next navigation.
+- Show original answers, correctness, and optional explanations without editing.
+- Snapshot question content for new attempts; older attempts use current bank content when available.
+
 ## 0.0.15 — History Attempt Deletion
 
 - Select and highlight a single attempt in History.

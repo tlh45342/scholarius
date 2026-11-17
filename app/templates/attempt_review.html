@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attempt Review - Scholarius</title><link rel="stylesheet" href="/static/style.css"></head>
+<body data-theme="{{ theme|default('system') }}">
+<div class="container container-wide">
+<h1>Attempt Review</h1>
+<p>{{ attempt.title }} · {{ attempt.mode|title }} · Score: <strong>{{ attempt.score }} / {{ attempt.question_count }}</strong></p>
+<div class="panel">
+<div class="review-header">
+<h2>Question {{ position }} of {{ total }}</h2>
+{% if answer.was_correct %}<strong class="review-correct">Correct</strong>{% else %}<strong class="review-incorrect">Incorrect</strong>{% endif %}
+</div>
+<p><strong>{{ snapshot.prompt }}</strong></p>
+{% if not historical %}<p class="review-notice">Historical question snapshot unavailable. {% if snapshot.choices %}Showing the current bank's question text and choices; they may have changed since this attempt.{% else %}The question may have been removed or its bank is unavailable.{% endif %} Recorded answers and correctness are preserved.</p>{% endif %}
+{% if snapshot.choices %}
+<div class="review-choices">
+{% for id, label in snapshot.choices.items() %}
+<div class="review-choice {% if id in correct %}review-choice-correct{% elif id in selected %}review-choice-incorrect{% endif %}">
+<span>{{ label }}</span>
+<span class="review-choice-label">{% if id in selected %}Your answer{% endif %}{% if id in selected and id in correct %} · {% endif %}{% if id in correct %}Correct answer{% endif %}</span>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<p>Your recorded answer: <strong>{{ answer.selected_answer or 'No answer' }}</strong></p>
+<p>Recorded correct answer: <strong>{{ answer.correct_answer }}</strong></p>
+{% endif %}
+{% if snapshot.explanation %}<div class="panel"><h3>Explanation</h3><p>{{ snapshot.explanation }}</p></div>{% endif %}
+{% if answer.domain %}<p>Domain: {{ answer.domain }}</p>{% endif %}
+<div class="review-navigation">
+{% if position > 1 %}<a class="button button-primary" href="/history/attempt/{{ attempt.id }}?question={{ position - 1 }}">Previous</a>{% else %}<span class="button button-disabled">Previous</span>{% endif %}
+<span>{{ position }} / {{ total }}</span>
+{% if position < total %}<a class="button button-primary" href="/history/attempt/{{ attempt.id }}?question={{ position + 1 }}">Next</a>{% else %}<span class="button button-disabled">Next</span>{% endif %}
+</div>
+</div>
+<a class="button button-primary" href="/history">Back to History</a>
+</div>
+{% include "_corner_nav.html" %}
+</body></html>

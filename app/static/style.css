@@ -1121,3 +1121,12 @@ body[data-theme="dark"] .corner-nav-button {
 body[data-theme="dark"] .history-attempt-row.selected { background: #254a70; color: #fff; }
 .history-attempt-actions { display: flex; justify-content: flex-end; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; }
 .history-attempt-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.review-header,.review-navigation { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.review-choices { display:grid; gap:.65rem; margin:1.25rem 0; }
+.review-choice { display:flex; justify-content:space-between; gap:1rem; padding:.9rem; border:1px solid #8995a1; border-radius:8px; }
+.review-choice-correct { border-color:#27834e; background:rgba(39,131,78,.12); }
+.review-choice-incorrect { border-color:#b84242; background:rgba(184,66,66,.12); }
+.review-choice-label { font-size:.85rem; font-weight:700; }
+.review-correct { color:#27834e; }.review-incorrect { color:#b84242; }
+.review-notice { padding:.75rem; border-left:3px solid #b88b30; }
+.review-navigation { margin:1.5rem 0 .5rem; }
