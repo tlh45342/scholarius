@@ -1234,6 +1234,26 @@ def history_page(request: Request):
     })
 
 
+@app.post("/history/attempt/{attempt_id}/delete")
+def delete_history_attempt(request: Request, attempt_id: int):
+    session = session_user(request)
+    if not session:
+        return redirect_to_login()
+    username = session.get("username", "unknown")
+    conn = get_conn()
+    try:
+        with conn:
+            # Ownership is checked in the DELETE itself; foreign-key cascade
+            # removes only the answer records belonging to this attempt.
+            conn.execute(
+                "DELETE FROM attempts WHERE id=? AND username=?",
+                (attempt_id, username),
+            )
+    finally:
+        conn.close()
+    return RedirectResponse(url="/history", status_code=303)
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(request: Request, message: str = "", error: str = ""):
     session = session_user(request)

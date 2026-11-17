@@ -1114,3 +1114,10 @@ body[data-theme="dark"] .corner-nav-button {
 .correct-answer-control { display: inline-flex; gap: .45rem; align-items: center; min-width: 6.5rem; margin-bottom: 1.45rem; cursor: pointer; font-weight: 650; }
 .correct-answer-control input { width: 1.15rem; height: 1.15rem; }
 @media (max-width: 640px) { .answer-editor-row { grid-template-columns: 1fr; gap: 0; } .correct-answer-control { margin: -.35rem 0 1rem; } }
+
+/* History: single-attempt selection */
+.history-attempt-row { cursor: pointer; }
+.history-attempt-row.selected { background: #d9e9fa; color: #152a40; }
+body[data-theme="dark"] .history-attempt-row.selected { background: #254a70; color: #fff; }
+.history-attempt-actions { display: flex; justify-content: flex-end; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; }
+.history-attempt-actions button:disabled { opacity: .45; cursor: not-allowed; }

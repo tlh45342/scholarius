@@ -1,5 +1,12 @@
 # Scholarius Changes
 
+## 0.0.15 — History Attempt Deletion
+
+- Select and highlight a single attempt in History.
+- Delete the selected attempt only after confirmation.
+- Delete its associated answer records via the existing database foreign-key cascade.
+- Recalculate History statistics when the page reloads.
+
 ## 0.0.14 — Bank Metadata and Controlled Taxonomy
 
 - Hid internal question and choice identifiers from normal question listings.
